@@ -1,190 +1,126 @@
 'use client'
 
 import React from 'react'
+import Link from 'next/link'
 import { motion } from 'framer-motion'
-import { Shield, Activity, Users, FileKey, ChevronRight, Lock, ShieldCheck, Check } from 'lucide-react'
-import { Badge } from '@/components/ui/badge'
+import { Navbar } from '@/components/layout/Navbar'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { NetworkTopology } from '@/components/dashboard/NetworkTopology'
-import { StatsDisplay } from '@/components/dashboard/StatsDisplay'
-import { AuthKeyInput } from '@/components/dashboard/AuthKeyInput'
+import { Badge } from '@/components/ui/badge'
+import { Shield, Lock, Globe, Server, CheckCircle2, ArrowRight } from 'lucide-react'
 
-const containerVariants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.1
-    }
-  }
-}
-
-const itemVariants = {
-  hidden: { y: 20, opacity: 0, filter: "blur(4px)" },
-  visible: {
-    y: 0,
-    opacity: 1,
-    filter: "blur(0px)",
-    transition: {
-      duration: 0.5
-    }
-  }
-}
-
-export default function DashboardPage() {
+export default function LandingPage() {
   return (
-    <main className="min-h-screen bg-vault-bg text-vault-text relative overflow-hidden">
-        {/* Ambient Background Noise/Grid */}
-        <div className="absolute inset-0 bg-grid-pattern opacity-[0.03] pointer-events-none animate-drift z-0" />
+    <div className="min-h-screen bg-vault-bg text-vault-text selection:bg-vault-green/30">
+      <Navbar />
+      
+      {/* Hero Section */}
+      <section className="relative pt-32 pb-20 overflow-hidden">
+        <div className="absolute inset-0 bg-grid-pattern opacity-[0.05] pointer-events-none animate-drift" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-vault-green/5 blur-[120px] rounded-full pointer-events-none" />
         
-        {/* Navigation */}
-        <nav className="border-b border-vault-slate/20 bg-vault-bg/80 backdrop-blur-md sticky top-0 z-50">
-            <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                    <div className="text-vault-green p-1 border border-vault-green/20 rounded-md bg-vault-green/5">
-                        <Shield size={20} />
-                    </div>
-                    <div>
-                        <h1 className="text-lg font-bold tracking-tight font-sans leading-none">DVPN <span className="text-vault-slate font-thin">ENTERPRISE</span></h1>
-                        <p className="text-[10px] text-vault-slate font-mono uppercase tracking-wider">Secure Privacy Platform</p>
-                    </div>
-                </div>
-                <div className="flex items-center gap-4">
-                     <span className="text-xs text-vault-slate font-mono hidden md:block">Connected: <span className="text-vault-green">Encrypted (TLS 1.3)</span></span>
-                     <Badge variant="hologphic">SVIT-CORP-01</Badge>
-                </div>
+        <div className="max-w-7xl mx-auto px-6 relative z-10 text-center">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+          >
+            <Badge variant="outline" className="mb-6 px-4 py-1.5 border-vault-green/30 text-vault-green bg-vault-green/5 text-xs">
+              <span className="w-2 h-2 rounded-full bg-vault-green animate-pulse mr-2" />
+              ENTERPRISE-GRADE ZK-PRIVACY
+            </Badge>
+            <h1 className="text-5xl md:text-7xl font-bold tracking-tight mb-8 font-sans">
+              Protect Corporate Assets <br />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-vault-green to-vault-blue">On The Public Chain</span>
+            </h1>
+            <p className="text-xl text-vault-slate max-w-2xl mx-auto mb-10 leading-relaxed">
+              The first decentralized VPN network designed for institutional compliance. 
+              Zero-knowledge interactions, audit-ready logs, and complete employee anonymity.
+            </p>
+            
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+              <Link href="/auth">
+                <Button size="lg" variant="cyber" className="text-lg h-14 px-8">
+                  Start Verification <ArrowRight className="ml-2 h-5 w-5" />
+                </Button>
+              </Link>
+              <Button size="lg" variant="outline" className="text-lg h-14 px-8 border-vault-slate/30 hover:bg-vault-slate/10">
+                View Documentation
+              </Button>
             </div>
-        </nav>
+          </motion.div>
+        </div>
+      </section>
 
-        <motion.div 
-            className="max-w-7xl mx-auto p-6 space-y-6 relative z-10"
-            variants={containerVariants}
-            initial="hidden"
-            animate="visible"
-        >
-            {/* Stats Row */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <motion.div variants={itemVariants}>
-                    <StatsDisplay label="Active Keys" value={100} trend="+12% this week" encrypted />
-                </motion.div>
-                <motion.div variants={itemVariants}>
-                    <StatsDisplay label="Daily Transactions" value={2847} unit="TXs" trend="+5.2%" encrypted />
-                </motion.div>
-                <motion.div variants={itemVariants}>
-                    <StatsDisplay label="Network Traffic" value="4.2" unit="PB/s" />
-                </motion.div>
-                <motion.div variants={itemVariants}>
-                    <StatsDisplay label="Privacy Score" value="99.9" unit="%" trend="Optimal" />
-                </motion.div>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Main Visualization */}
-                <motion.div variants={itemVariants} className="lg:col-span-2">
-                    <Card className="h-full border-vault-slate/20 bg-vault-bg/40">
-                        <CardHeader showTerminalDots>
-                            <CardTitle className="flex items-center justify-between">
-                                <span className="flex items-center gap-2"><Activity size={16} /> NETWORK TOPOLOGY</span>
-                                <Badge variant="outline" className="font-mono text-[10px]">LIVE FEED</Badge>
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent className="p-0 relative min-h-[400px]">
-                            <NetworkTopology />
-                            
-                            {/* Overlay Stats */}
-                            <div className="absolute bottom-4 left-4 p-3 bg-vault-bg/90 border border-vault-slate/20 backdrop-blur rounded-sm text-xs font-mono text-vault-slate">
-                                <div className="flex items-center gap-2 mb-1">
-                                    <div className="w-2 h-2 rounded-full bg-vault-green animate-pulse" />
-                                    <span>NODE_STATUS: ONLINE</span>
-                                </div>
-                                <div>LATENCY: 12ms</div>
-                                <div>ENCRYPTION: ZK-SNARK</div>
-                            </div>
-                        </CardContent>
-                    </Card>
-                </motion.div>
-
-                {/* Sidebar Controls */}
-                <div className="space-y-6">
-                    <motion.div variants={itemVariants}>
-                         <Card>
-                            <CardHeader>
-                                <CardTitle className="text-sm flex items-center gap-2"><FileKey size={14} /> AUTHENTICATION</CardTitle>
-                                <CardDescription>Verify employee node identity</CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <AuthKeyInput />
-                            </CardContent>
-                        </Card>
-                    </motion.div>
-
-                    <motion.div variants={itemVariants}>
-                        <Card className="overflow-hidden relative">
-                             <div className="absolute top-0 right-0 p-4 opacity-10"><Lock size={64} /></div>
-                            <CardHeader>
-                                <CardTitle className="text-sm">PRIVATE TRANSFER</CardTitle> 
-                            </CardHeader>
-                            <CardContent className="space-y-4">
-                                <div className="space-y-2">
-                                    <label className="text-xs font-mono text-vault-slate uppercase">Recipient ID</label>
-                                    <div className="flex bg-vault-slate/10 p-2 rounded-sm border border-vault-slate/20">
-                                        <input className="bg-transparent w-full text-sm outline-none text-white font-mono" placeholder="SVIT-USER-..." />
-                                    </div>
-                                </div>
-                                <div className="space-y-2">
-                                    <label className="text-xs font-mono text-vault-slate uppercase">Amount</label>
-                                    <div className="flex bg-vault-slate/10 p-2 rounded-sm border border-vault-slate/20 justify-between items-center">
-                                        <input className="bg-transparent w-full text-lg outline-none text-vault-green font-bold font-mono" placeholder="0.00" />
-                                        <span className="text-xs text-vault-slate">DVPN</span>
-                                    </div>
-                                </div>
-                                <Button variant="cyber" className="w-full mt-2">
-                                    Initiate ZK Proof
-                                </Button>
-                            </CardContent>
-                        </Card>
-                    </motion.div>
+      {/* Features Grid */}
+      <section className="py-24 border-t border-vault-slate/10 bg-vault-bg/50 backdrop-blur-sm">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="grid md:grid-cols-3 gap-8">
+            {[
+              {
+                icon: Shield,
+                title: "Zero-Knowledge Architecture",
+                desc: "Cryptography that proves transaction validity without revealing sender, receiver, or amount."
+              },
+              {
+                icon: Server,
+                title: "Compliance-First Core",
+                desc: "Built-in KYC verification and selective disclosure keys for regulatory audits."
+              },
+              {
+                icon: Globe,
+                title: "Global Mesh Network",
+                desc: "Decentralized node infrastructure ensuring 100% uptime and censorship resistance."
+              }
+            ].map((feature, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.1 }}
+                className="p-8 rounded-lg border border-vault-slate/10 bg-vault-slate/5 hover:border-vault-green/30 hover:bg-vault-slate/10 transition-all group"
+              >
+                <div className="w-12 h-12 rounded-lg bg-vault-bg border border-vault-slate/20 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                  <feature.icon className="text-vault-green" size={24} />
                 </div>
-            </div>
+                <h3 className="text-xl font-bold mb-3 text-white">{feature.title}</h3>
+                <p className="text-vault-slate leading-relaxed">{feature.desc}</p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
 
-            {/* Bottom Ledger */}
-             <motion.div variants={itemVariants}>
-                <Card>
-                    <CardHeader className="pb-2">
-                         <CardTitle className="text-sm flex items-center gap-2"><Users size={14} /> TRANSACTION LEDGER</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left text-xs font-mono">
-                                <thead>
-                                    <tr className="border-b border-vault-slate/20 text-vault-slate">
-                                        <th className="py-3 font-normal">HASH ID</th>
-                                        <th className="py-3 font-normal">TIMESTAMP</th>
-                                        <th className="py-3 font-normal">FROM</th>
-                                        <th className="py-3 font-normal">TO</th>
-                                        <th className="py-3 font-normal">AMOUNT</th>
-                                        <th className="py-3 font-normal">STATUS</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {[1,2,3,4].map((i) => (
-                                        <tr key={i} className="border-b border-vault-slate/10 group hover:bg-vault-slate/5 transition-colors cursor-crosshair">
-                                            <td className="py-3 text-vault-slate/70 group-hover:text-vault-blue transition-colors">0x7a...8b9{i}</td>
-                                            <td className="py-3 text-vault-slate">2026-01-31 14:2{i}:05</td>
-                                            <td className="py-3">************</td>
-                                            <td className="py-3">************</td>
-                                            <td className="py-3 font-bold text-white">{(Math.random() * 1000).toFixed(2)}</td>
-                                            <td className="py-3"><Badge variant="default" className="text-[10px] h-5">VERIFIED</Badge></td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    </CardContent>
-                </Card>
-             </motion.div>
-        </motion.div>
-    </main>
+      {/* Trusted By / Stats */}
+      <section className="py-20 border-t border-vault-slate/10">
+        <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-12">
+           <div className="text-left">
+              <h2 className="text-3xl font-bold mb-4">Trusted by Privacy-First Organsations</h2>
+              <div className="flex gap-8 opacity-50 grayscale hover:grayscale-0 transition-all duration-500">
+                  {/* Mock logos */}
+                  <div className="h-8 w-32 bg-vault-slate/20 rounded-md" />
+                  <div className="h-8 w-32 bg-vault-slate/20 rounded-md" />
+                  <div className="h-8 w-32 bg-vault-slate/20 rounded-md" />
+              </div>
+           </div>
+           
+           <div className="grid grid-cols-2 gap-8 text-right">
+              <div>
+                 <div className="text-4xl font-bold font-mono text-vault-blue">2.4M+</div>
+                 <div className="text-sm text-vault-slate uppercase tracking-wider">Private TXs</div>
+              </div>
+              <div>
+                 <div className="text-4xl font-bold font-mono text-vault-green">100%</div>
+                 <div className="text-sm text-vault-slate uppercase tracking-wider">Uptime</div>
+              </div>
+           </div>
+        </div>
+      </section>
+      
+      <footer className="py-12 border-t border-vault-slate/20 bg-vault-bg">
+          <div className="max-w-7xl mx-auto px-6 text-center">
+              <p className="text-vault-slate text-sm">© 2026 DVPN Enterprise Platform. All rights reserved.</p>
+          </div>
+      </footer>
+    </div>
   )
 }
