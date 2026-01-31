@@ -118,7 +118,7 @@ export default function LandingPage() {
       
       <footer className="py-12 border-t border-vault-slate/20 bg-vault-bg">
           <div className="max-w-7xl mx-auto px-6 text-center">
-              <p className="text-vault-slate text-sm">© 2026 DVPN Enterprise Platform. All rights reserved.</p>
+              <p className="text-vault-slate text-sm">© 2026 TrustNet Enterprise Platform. All rights reserved.</p>
           </div>
       </footer>
     </div>

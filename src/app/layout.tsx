@@ -14,7 +14,7 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "DVPN Enterprise Platform",
+  title: "TrustNet Enterprise Platform",
   description: "Secure Enterprise Privacy Platform",
 };
 

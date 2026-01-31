@@ -61,7 +61,7 @@ export function WalletConnect() {
                     <button onClick={() => setShowModal(false)} className="text-vault-slate hover:text-white">✕</button>
                 </div>
                 <div className="p-6 space-y-3">
-                    <p className="text-sm text-vault-slate mb-4">Choose a wallet to connect to DVPN Enterprise.</p>
+                    <p className="text-sm text-vault-slate mb-4">Choose a wallet to connect to TrustNet Enterprise.</p>
                     
                     {['MetaMask', 'WalletConnect', 'Coinbase Wallet'].map((wallet) => (
                         <button 

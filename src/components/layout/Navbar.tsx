@@ -15,7 +15,7 @@ export function Navbar() {
                 <Shield size={24} />
             </div>
             <div className="flex flex-col">
-                <span className="text-lg font-bold tracking-tight leading-none text-white">DVPN</span>
+                <span className="text-lg font-bold tracking-tight leading-none text-white">TrustNet</span>
                 <span className="text-[10px] text-vault-slate font-mono uppercase tracking-wider">Enterprise Privacy</span>
             </div>
         </Link>

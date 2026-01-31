@@ -27,7 +27,7 @@ export function Sidebar() {
          <div className="text-vault-green p-1 border border-vault-green/20 rounded-md bg-vault-green/5">
             <Shield size={20} />
          </div>
-         <span className="font-bold tracking-tight text-white">DVPN <span className="font-thin text-vault-slate">ENT</span></span>
+         <span className="font-bold tracking-tight text-white">TrustNet <span className="font-thin text-vault-slate">ENT</span></span>
       </div>
 
       <div className="p-4 flex-1 space-y-1 overflow-y-auto">

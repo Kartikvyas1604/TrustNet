@@ -36,7 +36,7 @@ export default function AuthPage() {
                 <div className="text-vault-green p-1 border border-vault-green/20 rounded-md bg-vault-green/5">
                     <Shield size={20} />
                 </div>
-                <span className="font-bold tracking-tight text-white">DVPN <span className="text-vault-slate font-thin">AUTH</span></span>
+                <span className="font-bold tracking-tight text-white">TrustNet <span className="text-vault-slate font-thin">AUTH</span></span>
              </Link>
          </header>
 
@@ -48,7 +48,7 @@ export default function AuthPage() {
                  <div className="space-y-8 hidden md:block">
                      <div>
                          <h1 className="text-4xl font-bold mb-2">Secure Access Gateway</h1>
-                         <p className="text-vault-slate">Authenticate to access the DVPN Enterprise Network.</p>
+                         <p className="text-vault-slate">Authenticate to access the TrustNet Enterprise Network.</p>
                      </div>
 
                      <div className="space-y-6 relative">
