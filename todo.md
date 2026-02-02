@@ -7,7 +7,7 @@
 - [x] Build `payroll_distributor.move` optimized for >100 employee PTBs and batching logic
 - [x] Write integration/unit tests for organization_registry (7/7 passing)
 - [x] Write tests for employee_wallet, privacy_pool, payroll_distributor (tests created but need fixing)
-- [ ] Deploy modules to Sui testnet and document addresses
+- [x] Deploy modules to Sui testnet and document addresses
 
 ## Backend Integration
 - [ ] Create `SuiBlockchainService.ts` abstraction for Move calls, PTB construction, and DeepBook swaps
