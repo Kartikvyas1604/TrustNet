@@ -30,7 +30,7 @@ export default function LandingPage() {
             </Badge>
             <h1 className="text-5xl md:text-7xl font-bold tracking-tight mb-8 font-sans">
               Protect Corporate Assets <br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-vault-green to-vault-blue">On The Public Chain</span>
+              <span className="text-vault-green">On The Public Chain</span>
             </h1>
             <p className="text-xl text-vault-slate max-w-2xl mx-auto mb-10 leading-relaxed">
               The first decentralized VPN network designed for institutional compliance. 
@@ -43,9 +43,11 @@ export default function LandingPage() {
                   Start Verification <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>
               </Link>
-              <Button size="lg" variant="outline" className="text-lg h-14 px-8 border-vault-slate/30 hover:bg-vault-slate/10">
-                View Documentation
-              </Button>
+              <Link href="/docs">
+                <Button size="lg" variant="outline" className="text-lg h-14 px-8 border-vault-slate/30 hover:bg-vault-slate/10">
+                  View Documentation
+                </Button>
+              </Link>
             </div>
           </motion.div>
         </div>

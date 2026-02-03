@@ -27,7 +27,7 @@ export function AuthKeyInput() {
   return (
     <div className="flex flex-col gap-4">
       <div className="relative group">
-        <div className={`absolute -inset-0.5 bg-gradient-to-r from-vault-slate to-vault-slate/50 rounded-sm opacity-50 blur transition duration-1000 group-hover:duration-200 ${status === 'valid' ? 'from-vault-green to-vault-blue opacity-100' : ''}`}></div>
+        <div className={`absolute -inset-0.5 rounded-sm opacity-50 blur transition duration-1000 group-hover:duration-200 ${status === 'valid' ? 'bg-vault-green opacity-100' : 'bg-vault-slate'}`}></div>
         <div className="relative flex items-center bg-vault-bg rounded-sm border border-vault-slate/30 p-1">
           <div className="pl-3 text-vault-slate">
             {status === 'valid' ? <ShieldCheck size={18} className="text-vault-green" /> : <Lock size={18} />}

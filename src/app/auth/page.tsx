@@ -28,7 +28,7 @@ export default function AuthPage() {
     <div className="min-h-screen bg-vault-bg text-vault-text flex flex-col relative overflow-hidden">
          {/* Background */}
          <div className="absolute inset-0 bg-grid-pattern opacity-[0.03] animate-drift pointer-events-none" />
-         <div className="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-l from-vault-green/5 to-transparent pointer-events-none" />
+         <div className="absolute top-0 right-0 w-1/2 h-full bg-vault-green/5 pointer-events-none" />
 
          {/* Header */}
          <header className="p-6 relative z-10">

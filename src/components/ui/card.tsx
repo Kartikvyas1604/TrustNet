@@ -15,7 +15,7 @@ const Card = React.forwardRef<
     {...props}
   >
      {/* Scanline effect overlay */}
-    <div className="absolute inset-0 pointer-events-none bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.1)_50%),linear-gradient(90deg,rgba(255,0,0,0.03),rgba(0,255,0,0.01),rgba(0,0,255,0.03))] z-0 bg-[length:100%_2px,3px_100%] opacity-20" />
+    <div className="absolute inset-0 pointer-events-none bg-[repeating-linear-gradient(0deg,rgba(0,0,0,0.1)_0px,transparent_1px,transparent_2px)] z-0 opacity-20" />
     <div className="relative z-10">
         {props.children}
     </div>

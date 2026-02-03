@@ -33,7 +33,6 @@ function Badge({ className, variant, ...props }: BadgeProps) {
   if (variant === 'hologphic') {
     return (
       <div className={cn(badgeVariants({ variant }), className, "group relative")} {...props}>
-        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-100%] animate-shimmer" />
         <span className="relative z-10 flex items-center gap-2">
           <span className="h-1.5 w-1.5 rounded-full bg-vault-blue animate-pulse" />
           {props.children}

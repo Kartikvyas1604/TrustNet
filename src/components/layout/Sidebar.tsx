@@ -34,7 +34,7 @@ export function Sidebar() {
         <div className="mb-6 px-2">
             <p className="text-[10px] text-vault-slate uppercase tracking-wider font-mono mb-2">Organization</p>
             <div className="flex items-center gap-2 p-2 rounded-md bg-vault-slate/5 border border-vault-slate/10">
-                <div className="w-8 h-8 rounded bg-gradient-to-br from-vault-blue to-purple-900 flex items-center justify-center text-xs font-bold">SV</div>
+                <div className="w-8 h-8 rounded bg-vault-blue flex items-center justify-center text-xs font-bold">SV</div>
                 <div className="overflow-hidden">
                     <div className="text-sm font-bold truncate">SVIT Corp</div>
                     <div className="text-[10px] text-vault-green flex items-center gap-1">
