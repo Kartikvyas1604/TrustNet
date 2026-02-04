@@ -1,9 +1,3 @@
-/**
- * API Response Formatter
- * 
- * Standardized response formatting for all API endpoints.
- */
-
 import { Response } from 'express';
 import { ApiResponse } from '../types';
 import { ERROR_CODES } from '../config/constants';

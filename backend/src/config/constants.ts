@@ -1,13 +1,3 @@
-/**
- * Application Constants for TrustNet Backend
- * 
- * Centralized constants for configuration, limits, and enumerations.
- */
-
-// ============================================================================
-// SUBSCRIPTION TIER LIMITS
-// ============================================================================
-
 export const SUBSCRIPTION_LIMITS = {
   starter: {
     employeeLimit: 10,

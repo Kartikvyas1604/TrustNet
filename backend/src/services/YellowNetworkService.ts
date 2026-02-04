@@ -1,10 +1,3 @@
-/**
- * Yellow Network State Channel Service (Simplified 50% Implementation)
- * 
- * Manages off-chain state channels for instant, gasless transactions.
- * This is a simplified version that demonstrates the architecture.
- */
-
 import { EventEmitter } from 'events';
 import redisService from './RedisService';
 import logger from '../utils/logger';

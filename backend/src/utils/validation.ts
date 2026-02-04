@@ -1,9 +1,3 @@
-/**
- * Validation Utilities for TrustNet
- * 
- * Provides validation functions for addresses, transactions, and user inputs.
- */
-
 import { ethers } from 'ethers';
 import { SUPPORTED_CHAINS, SUPPORTED_CURRENCIES } from '../config/constants';
 

@@ -1,10 +1,3 @@
-/**
- * TrustNet Backend - Core Type Definitions
- * 
- * This file contains all TypeScript interfaces and types used across the backend.
- * Following enterprise-grade practices for type safety and maintainability.
- */
-
 import { ObjectId } from 'mongoose';
 
 // ============================================================================

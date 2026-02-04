@@ -1,10 +1,3 @@
-/**
- * Transaction Orchestration Service
- * 
- * Core service that routes transactions based on amount, destination, and privacy requirements.
- * Implements the decision tree for Yellow/Uniswap/Sui routing.
- */
-
 import { ethers } from 'ethers';
 import Employee from '../models/Employee';
 import Organization from '../models/Organization';

@@ -1,9 +1,3 @@
-/**
- * Helper Utilities for TrustNet Backend
- * 
- * Common helper functions used across the application.
- */
-
 import { nanoid } from 'nanoid';
 import { ethers } from 'ethers';
 import { PAGINATION } from '../config/constants';
