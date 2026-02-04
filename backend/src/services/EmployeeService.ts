@@ -3,6 +3,7 @@ import crypto from 'crypto';
 import Employee, { IEmployee } from '../models/Employee';
 import AuthKey from '../models/AuthKey';
 import Organization from '../models/Organization';
+import MerkleTreeService from './MerkleTreeService';
 
 interface OnboardEmployeeInput {
   authKey: string;
@@ -84,6 +85,11 @@ class EmployeeService {
 
     await employee.save();
 
+    
+await MerkleTreeService.addLeaf(
+  matchedKey.organizationId,
+  employee.employeeId
+);
     // Update auth key status
     matchedKey.status = 'active';
     matchedKey.assignedEmployeeId = employeeId;
