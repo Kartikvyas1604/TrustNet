@@ -313,13 +313,9 @@ export function safeJsonParse<T>(json: string, fallback: T): T {
  * Creates a random hex string
  */
 export function randomHex(length: number = 32): string {
+  const crypto = require('crypto');
   const bytes = new Uint8Array(length);
-  if (typeof window !== 'undefined' && window.crypto) {
-    window.crypto.getRandomValues(bytes);
-  } else {
-    const crypto = require('crypto');
-    crypto.randomFillSync(bytes);
-  }
+  crypto.randomFillSync(bytes);
   return '0x' + Buffer.from(bytes).toString('hex');
 }
 

@@ -200,6 +200,62 @@ class RedisService {
   }
 
   /**
+   * Set a key-value pair with expiry
+   */
+  async setWithExpiry(key: string, value: string, ttl: number): Promise<void> {
+    try {
+      await this.client?.setex(key, ttl, value);
+      logger.debug(`Set key with expiry: ${key}`);
+    } catch (error) {
+      logger.error('Failed to set key with expiry:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Set a key-value pair with optional expiry
+   */
+  async set(key: string, value: string, ttl?: number): Promise<void> {
+    try {
+      if (ttl) {
+        await this.client?.setex(key, ttl, value);
+      } else {
+        await this.client?.set(key, value);
+      }
+      logger.debug(`Set key: ${key}`);
+    } catch (error) {
+      logger.error('Failed to set key:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get a value by key
+   */
+  async get(key: string): Promise<string | null> {
+    try {
+      return await this.client?.get(key) || null;
+    } catch (error) {
+      logger.error('Failed to get key:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Delete one or more keys
+   */
+  async del(...keys: string[]): Promise<void> {
+    try {
+      if (keys.length > 0) {
+        await this.client?.del(...keys);
+        logger.debug(`Deleted keys: ${keys.join(', ')}`);
+      }
+    } catch (error) {
+      logger.error('Failed to delete keys:', error);
+    }
+  }
+
+  /**
    * Clear all cached data for an employee
    */
   async clearEmployeeCache(employeeId: string): Promise<void> {

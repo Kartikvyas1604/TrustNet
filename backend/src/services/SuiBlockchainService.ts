@@ -1,6 +1,6 @@
 import { EventEmitter } from 'events';
 import logger from '../utils/logger';
-import { redisService } from './RedisService';
+import redisService from './RedisService';
 import { isValidSuiAddress } from '../utils/validation';
 import { formatUSDC, parseUSDC } from '../utils/helpers';
 
@@ -79,7 +79,7 @@ class SuiBlockchainService extends EventEmitter {
       }
 
       // Convert USD to USDC units (6 decimals)
-      const amountInUnits = parseUSDC(amount);
+      const amountInUnits = BigInt(parseUSDC(amount.toString()));
 
       // Check sender balance
       const balance = await this.getUSDCBalance(sender);
@@ -106,7 +106,7 @@ class SuiBlockchainService extends EventEmitter {
           digest: txDigest,
           sender,
           recipient,
-          amount: formatUSDC(amountInUnits),
+          amount: formatUSDC(amountInUnits.toString()),
           sponsored: !!sponsor,
         });
 
