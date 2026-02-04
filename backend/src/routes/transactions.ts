@@ -1,5 +1,9 @@
 import { Router, Request, Response } from 'express';
 import TransactionService from '../services/TransactionService';
+import { transactionOrchestrationService } from '../services/TransactionOrchestrationService';
+import { sendSuccess, sendError, sendValidationError } from '../utils/response';
+import { isValidAmount } from '../utils/validation';
+import { PrivacyLevel, TransactionType } from '../types';
 
 const router = Router();
 
@@ -39,6 +43,50 @@ router.post('/send', async (req: Request, res: Response) => {
       success: false,
       error: error.message,
     });
+  }
+});
+
+/**
+ * POST /api/transactions/orchestrated
+ * Create and process transaction using orchestration service (Yellow/Uniswap/Sui routing)
+ */
+router.post('/orchestrated', async (req: Request, res: Response) => {
+  try {
+    const {
+      organizationId,
+      employeeId,
+      recipient,
+      amount,
+      privacyLevel,
+      memo,
+      metadata,
+    } = req.body;
+
+    // Validate required fields
+    if (!organizationId || !employeeId || !recipient || !amount) {
+      return sendValidationError(res, 'Missing required fields: organizationId, employeeId, recipient, amount');
+    }
+
+    // Validate amount
+    if (!isValidAmount(amount)) {
+      return sendValidationError(res, 'Invalid amount format');
+    }
+
+    // Process transaction through orchestration service
+    const result = await transactionOrchestrationService.processTransaction({
+      organizationId,
+      employeeId,
+      recipient,
+      amount: parseFloat(amount),
+      privacyLevel: (privacyLevel as PrivacyLevel) || PrivacyLevel.STANDARD,
+      memo,
+      metadata,
+    });
+
+    // Return success response
+    return sendSuccess(res, result, 'Transaction processed successfully', 201);
+  } catch (error: any) {
+    return sendError(res, error.message, 400);
   }
 });
 
