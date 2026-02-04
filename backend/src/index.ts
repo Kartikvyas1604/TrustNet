@@ -10,6 +10,9 @@ import redisService from './services/RedisService';
 import ensService from './services/ENSService';
 import webSocketService from './services/WebSocketService';
 import cronService from './services/CronService';
+import { transactionOrchestrationService } from './services/TransactionOrchestrationService';
+import { yellowNetworkService } from './services/YellowNetworkService';
+import { suiBlockchainService } from './services/SuiBlockchainService';
 import securityMiddleware from './middleware/SecurityMiddleware';
 
 // Import routes
@@ -91,6 +94,20 @@ const startServer = async () => {
     await ensService.initialize();
     logger.info('✓ ENS Service initialized');
 
+    // Initialize Yellow Network Service
+    yellowNetworkService.monitorChannels();
+    logger.info('✓ Yellow Network Service initialized');
+
+    // Check Sui Blockchain Service
+    if (suiBlockchainService.isReady()) {
+      logger.info('✓ Sui Blockchain Service ready');
+    } else {
+      logger.warn('⚠ Sui Blockchain Service running in simulated mode');
+    }
+
+    // Initialize Transaction Orchestration Service
+    logger.info('✓ Transaction Orchestration Service ready');
+
     // Initialize WebSocket Service
     webSocketService.initialize(httpServer);
     logger.info('✓ WebSocket Service initialized');
@@ -118,6 +135,13 @@ const startServer = async () => {
       logger.info('  - Organizations: /api/organizations');
       logger.info('  - Employees: /api/employees');
       logger.info('  - Transactions: /api/transactions');
+      logger.info('  - Orchestrated TX: POST /api/transactions/orchestrated');
+      logger.info('');
+      logger.info('  Blockchain Integrations:');
+      logger.info('  - Yellow Network (Off-chain state channels)');
+      logger.info('  - Uniswap v4 (Privacy pool hooks)');
+      logger.info('  - Sui Blockchain (Settlement layer)');
+      logger.info('  - ENS (Identity resolution)');
       logger.info('='.repeat(60) + '\n');
     });
   } catch (error) {
