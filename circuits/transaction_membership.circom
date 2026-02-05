@@ -1,30 +1,35 @@
+// Note: Simplified for Circom 0.5.46 compatibility
+// Upgrade to Circom 2.x for full Poseidon and MerkleProof support
+
 template TransactionMembership() {
     // Private inputs
-    signal input transaction_hash;
-    signal input merkle_path[10]; // Assuming depth 10
-    signal input merkle_indices[10];
-    
+    signal input employeeSecret;
+    signal input pathElements[20];
+    signal input pathIndices[20];
+
     // Public inputs
-    signal input merkle_root;
-    
-    // Output
-    signal output valid;
-    
-    // Merkle tree verification logic
-    signal computed_root;
-    signal path_elements[11];
-    
-    path_elements[0] <== transaction_hash;
-    
-    // Simple merkle path verification (simplified)
-    for (var i = 0; i < 10; i++) {
-        path_elements[i+1] <== path_elements[i] + merkle_path[i];
+    signal input merkleRoot;
+    signal output nullifier;
+
+    // Simplified leaf computation (replace with Poseidon in production)
+    signal leaf;
+    leaf <== employeeSecret * employeeSecret;
+
+    // Simplified merkle path verification
+    signal computedHash[21];
+    computedHash[0] <== leaf;
+
+    for (var i = 0; i < 20; i++) {
+        computedHash[i+1] <== computedHash[i] + pathElements[i];
     }
-    
-    computed_root <== path_elements[10];
-    
-    // Check if computed root matches expected root
-    valid <== (computed_root - merkle_root) * (computed_root - merkle_root);
+
+    // Verify root matches
+    signal rootCheck;
+    rootCheck <== computedHash[20] - merkleRoot;
+    rootCheck === 0;
+
+    // Nullifier generation (simplified)
+    nullifier <== employeeSecret * 2;
 }
 
 component main = TransactionMembership();
