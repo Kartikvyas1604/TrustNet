@@ -15,6 +15,13 @@ import yellowNetworkService from './services/YellowNetworkService';
 import { suiBlockchainService } from './services/SuiBlockchainService';
 import securityMiddleware from './middleware/SecurityMiddleware';
 
+// Import new services and middleware
+import { initializeWebSocket } from './services/websocket.service';
+import { getSuiContractService } from './services/sui-contract.service';
+import { getStripeService } from './services/stripe.service';
+import { cleanupExpiredSessions, rateLimit } from './middleware/auth';
+import { sanitizeInput } from './middleware/validation';
+
 // Import routes
 import organizationRoutes from './routes/organizations';
 import employeeRoutes from './routes/employees';
@@ -44,9 +51,21 @@ app.use(cors(securityMiddleware.corsOptions()));
 app.use(securityMiddleware.sanitizeInputs());
 app.use(securityMiddleware.generalRateLimiter());
 
+// Additional security layers
+app.use(sanitizeInput);
+app.use(rateLimit(100, 60000)); // 100 requests per minute
+
 // Body parsing middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Stripe webhook endpoint (must be before body parser)
+app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), async (req, res) => {
+  const signature = req.headers['stripe-signature'] as string
+  const stripeService = getStripeService()
+  const result = await stripeService.handleWebhook(req.body, signature)
+  res.json(result)
+});
 
 // Request logging middleware
 app.use((req: Request, res: Response, next: NextFunction) => {
@@ -123,7 +142,23 @@ const startServer = async () => {
 
     // Initialize WebSocket Service
     webSocketService.initialize(httpServer);
-    logger.info('✓ WebSocket Service initialized');
+    logger.info('✓ WebSocket Service (legacy) initialized');
+    
+    // Initialize new WebSocket service
+    const wsService = initializeWebSocket(httpServer);
+    logger.info('✓ WebSocket Service (new) initialized');
+
+    // Initialize Sui Contract Service
+    const suiService = getSuiContractService();
+    logger.info('✓ Sui Contract Service initialized');
+
+    // Initialize Stripe Service
+    const stripeService = getStripeService();
+    logger.info('✓ Stripe Payment Service initialized');
+
+    // Start session cleanup
+    cleanupExpiredSessions();
+    logger.info('✓ Auth session cleanup initialized');
 
     // Initialize and start Cron Service
     cronService.initialize();
