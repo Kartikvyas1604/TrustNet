@@ -4,26 +4,31 @@ import logger from '../utils/logger';
 class RedisService {
   private client: Redis | null = null;
   private isConnected: boolean = false;
+  private connectionAttempted: boolean = false;
 
   /**
    * Initialize Redis connection
    */
   async connect(): Promise<void> {
+    if (this.connectionAttempted) {
+      return;
+    }
+    
+    this.connectionAttempted = true;
+    
     try {
       const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
       
       this.client = new Redis(redisUrl, {
-        maxRetriesPerRequest: 3,
+        maxRetriesPerRequest: 1,
+        enableOfflineQueue: false,
+        lazyConnect: true,
         retryStrategy(times) {
-          const delay = Math.min(times * 50, 2000);
-          return delay;
-        },
-        reconnectOnError(err) {
-          const targetError = 'READONLY';
-          if (err.message.includes(targetError)) {
-            return true;
+          // Don't retry - fail fast
+          if (times > 1) {
+            return null;
           }
-          return false;
+          return null;
         },
       });
 
@@ -32,22 +37,37 @@ class RedisService {
         logger.info('Redis connected successfully');
       });
 
-      this.client.on('error', (err) => {
-        logger.error('Redis error:', err);
+      this.client.on('error', (err: any) => {
+        // Silent error logging - don't spam
+        if (this.isConnected) {
+          logger.error('Redis error:', { code: err.code, message: err.message });
+        }
         this.isConnected = false;
       });
 
       this.client.on('close', () => {
+        if (this.isConnected) {
+          logger.warn('Redis connection closed');
+        }
         this.isConnected = false;
-        logger.warn('Redis connection closed');
       });
 
-      // Test connection
-      await this.client.ping();
+      // Test connection with timeout
+      await this.client.connect();
+      await Promise.race([
+        this.client.ping(),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Connection timeout')), 2000))
+      ]);
       logger.info('Redis connection verified');
     } catch (error) {
-      logger.error('Failed to connect to Redis:', error);
-      throw error;
+      logger.warn('Redis unavailable - caching disabled. This is optional and won\'t affect core functionality.');
+      // Clean up the failed client
+      if (this.client) {
+        this.client.disconnect();
+        this.client = null;
+      }
+      this.isConnected = false;
+      // Don't throw - allow app to continue without Redis
     }
   }
 

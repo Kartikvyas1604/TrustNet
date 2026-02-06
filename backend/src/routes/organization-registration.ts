@@ -276,7 +276,7 @@ router.post(
         await prisma.organization.update({
           where: { organizationId },
           data: {
-            paymentStatus: 'PENDING_PAYMENT',
+            paymentStatus: 'PENDING',
             // Store expected payment amount for verification
             treasuryAddresses: {
               paymentAddress,

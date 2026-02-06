@@ -1,10 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
+const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'
 
 export async function GET(request: NextRequest) {
   try {
-    const response = await fetch(`${BACKEND_URL}/api/admin/organizations`, {
+    const searchParams = request.nextUrl.searchParams
+    const status = searchParams.get('status')
+    
+    const url = status 
+      ? `${BACKEND_URL}/api/admin/organizations?status=${status}`
+      : `${BACKEND_URL}/api/admin/organizations`
+    
+    const response = await fetch(url, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',

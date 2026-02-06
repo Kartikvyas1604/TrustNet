@@ -28,6 +28,7 @@ import employeeRoutes from './routes/employees';
 import transactionRoutes from './routes/transactions';
 import ensRoutes from './routes/ens';
 import authRoutes from './routes/auth';
+import adminRoutes from './routes/admin';
 
 // Import new workflow routes
 import organizationRegistrationRoutes from './routes/organization-registration';
@@ -101,6 +102,7 @@ app.use('/api/ens', ensRoutes);
 app.use('/api/organizations', organizationRoutes);
 app.use('/api/employees', employeeRoutes);
 app.use('/api/transactions', transactionRoutes);
+app.use('/api/admin', adminRoutes);
 
 // New workflow routes
 app.use('/api/organization', organizationRegistrationRoutes);
@@ -131,11 +133,11 @@ const startServer = async () => {
     logger.info('✓ MongoDB connected');
 
     // Initialize Redis (optional - non-blocking)
-    try {
-      await redisService.connect();
+    await redisService.connect();
+    if (redisService.isHealthy()) {
       logger.info('✓ Redis connected');
-    } catch (error) {
-      logger.warn('⚠ Redis connection failed - continuing without Redis (caching disabled)');
+    } else {
+      logger.info('⚠ Redis disabled - caching unavailable (optional feature)');
     }
 
     // Initialize ENS Service
