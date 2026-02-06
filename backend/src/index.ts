@@ -2,6 +2,7 @@ import express, { Express, Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import http from 'http';
+import fileUpload from 'express-fileupload';
 import { connectDB } from './config/database';
 
 // Import services
@@ -35,6 +36,8 @@ import organizationRegistrationRoutes from './routes/organization-registration';
 import employeeOnboardingRoutes from './routes/employee-onboarding';
 import transactionFlowRoutes from './routes/transaction-flow';
 import treasuryPayrollRoutes from './routes/treasury-payroll';
+import uploadRoutes from './routes/upload';
+import paymentRoutes from './routes/payment';
 
 // Load environment variables
 dotenv.config();
@@ -71,6 +74,13 @@ app.use(rateLimit(100, 60000)); // 100 requests per minute
 // Body parsing middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// File upload middleware
+app.use(fileUpload({
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB max file size
+  abortOnLimit: true,
+  createParentPath: true,
+}));
 
 // Stripe webhook endpoint (must be before body parser)
 app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), async (req, res) => {
@@ -110,6 +120,8 @@ app.use('/api/employee', employeeOnboardingRoutes);
 app.use('/api/transactions', transactionFlowRoutes);
 app.use('/api/treasury', treasuryPayrollRoutes);
 app.use('/api/payroll', treasuryPayrollRoutes);
+app.use('/api/upload', uploadRoutes);
+app.use('/api/payment', paymentRoutes);
 
 // 404 handler
 app.use((req: Request, res: Response) => {

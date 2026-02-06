@@ -39,7 +39,7 @@ export default function OrganizationDetailsPage() {
 
     try {
       const orgType = sessionStorage.getItem('orgType')
-      const response = await fetch('/api/organization/register/details', {
+      const response = await fetch('http://localhost:5001/api/organization/register/details', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -58,7 +58,8 @@ export default function OrganizationDetailsPage() {
 
       if (data.success) {
         sessionStorage.setItem('organizationId', data.data.organizationId)
-        router.push('/organization/register/license')
+        // Redirect to document upload page
+        router.push(`/organization/documents?orgId=${data.data.organizationId}`)
       } else {
         alert(data.error || 'Registration failed')
       }
@@ -276,7 +277,7 @@ export default function OrganizationDetailsPage() {
                 disabled={loading}
                 className="px-8"
               >
-                {loading ? 'Processing...' : 'Continue to License Selection'}
+                {loading ? 'Processing...' : 'Continue to Document Upload'}
               </Button>
             </div>
           </form>

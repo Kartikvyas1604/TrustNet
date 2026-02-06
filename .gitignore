@@ -53,3 +53,7 @@ yarn.lock
 # logs
 logs/
 *.log
+
+# uploads and user files
+uploads/
+backend/uploads/

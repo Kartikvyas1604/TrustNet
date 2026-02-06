@@ -35,6 +35,9 @@ Thumbs.db
 *~
 *.orig
 
+# Uploads directory
+uploads/
+
 # Testing
 coverage/
 .nyc_output/
