@@ -27,6 +27,14 @@ npm-debug.log*
 .DS_Store
 Thumbs.db
 
+# Backup and temporary files
+*.bak
+*.backup
+*.old
+*.tmp
+*~
+*.orig
+
 # Testing
 coverage/
 .nyc_output/
