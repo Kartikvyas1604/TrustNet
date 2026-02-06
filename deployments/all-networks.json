@@ -1,0 +1,131 @@
+{
+  "version": "1.0.0",
+  "lastUpdated": "2026-02-06T12:46:54.773Z",
+  "networks": {
+    "baseSepolia": {
+      "chainId": 84532,
+      "name": "Base Sepolia",
+      "rpcUrl": "https://sepolia.base.org",
+      "explorerUrl": "https://sepolia.basescan.org",
+      "isTestnet": true,
+      "deployments": {
+        "transactionMembershipVerifier": {
+          "address": "0x0d2B09395Ae7C136e77892fC7EEFB0011898A4fe",
+          "deployedAt": "2026-02-06T12:46:54.773Z",
+          "deployer": "0xB18C4Be38412E8A12961a09988a9DD211257476F",
+          "verified": false,
+          "explorerUrl": "https://sepolia.basescan.org/address/0x0d2B09395Ae7C136e77892fC7EEFB0011898A4fe"
+        },
+        "amountCommitmentVerifier": {
+          "address": "0xfcE235771639Bbfc1dfEE7c3b499551ae0C3D414",
+          "deployedAt": "2026-02-06T12:46:54.773Z",
+          "deployer": "0xB18C4Be38412E8A12961a09988a9DD211257476F",
+          "verified": false,
+          "explorerUrl": "https://sepolia.basescan.org/address/0xfcE235771639Bbfc1dfEE7c3b499551ae0C3D414"
+        },
+        "poolManager": {
+          "address": "0x7Da1D65F8B249183667cdE74C5CBD46dD38AA829",
+          "note": "Uniswap v4 PoolManager (official deployment)"
+        },
+        "privacyPoolHook": {
+          "address": null,
+          "status": "pending",
+          "note": "Deploy with: npm run deploy:hook -- --network baseSepolia"
+        }
+      }
+    },
+    "sepolia": {
+      "chainId": 11155111,
+      "name": "Ethereum Sepolia",
+      "rpcUrl": "https://eth-sepolia.g.alchemy.com/v2/demo",
+      "explorerUrl": "https://sepolia.etherscan.io",
+      "isTestnet": true,
+      "deployments": {
+        "transactionMembershipVerifier": {
+          "address": null,
+          "status": "not deployed"
+        },
+        "amountCommitmentVerifier": {
+          "address": null,
+          "status": "not deployed"
+        }
+      }
+    },
+    "base": {
+      "chainId": 8453,
+      "name": "Base Mainnet",
+      "rpcUrl": "https://mainnet.base.org",
+      "explorerUrl": "https://basescan.org",
+      "isTestnet": false,
+      "deployments": {
+        "transactionMembershipVerifier": {
+          "address": null,
+          "status": "production - pending audit"
+        },
+        "amountCommitmentVerifier": {
+          "address": null,
+          "status": "production - pending audit"
+        }
+      }
+    },
+    "suiTestnet": {
+      "name": "Sui Testnet",
+      "rpcUrl": "https://fullnode.testnet.sui.io:443",
+      "explorerUrl": "https://testnet.suivision.xyz",
+      "isTestnet": true,
+      "deployments": {
+        "trustnetPackage": {
+          "packageId": "0xaea2bdfbdab9d4f0ae173214c078e86f3e50d04a5ed8195192dec53729e3dfef",
+          "deployedAt": "2026-02-03T00:00:00.000Z",
+          "deployer": "0x085d1762b64b2fcf184cf47d82681bde2934ead8b42362eabc8bc4d4382bd9a9",
+          "transactionDigest": "6emDbkuADbUVC2R7U7aPkSotKyKsMU6shJYD9CWkaMHD",
+          "upgradeCapId": "0x086899ac4d9f4ee70711fe9ee8a26f6fc405bb974e4f4102a6eed60368997a66",
+          "explorerUrl": "https://testnet.suivision.xyz/package/0xaea2bdfbdab9d4f0ae173214c078e86f3e50d04a5ed8195192dec53729e3dfef",
+          "modules": [
+            "employee_wallet",
+            "organization_registry",
+            "payroll_distributor",
+            "privacy_pool"
+          ]
+        },
+        "usdcPackage": {
+          "packageId": "0x5d4b302506645c37ff133b98c4b50a5ae14841659738d6d733d59d0d217a93bf",
+          "treasury": "0xc060006111016b8a020ad5b33834984a437aaa7d3c74c18e09a95d48aceab08c"
+        }
+      }
+    },
+    "suiMainnet": {
+      "name": "Sui Mainnet",
+      "rpcUrl": "https://fullnode.mainnet.sui.io:443",
+      "explorerUrl": "https://suivision.xyz",
+      "isTestnet": false,
+      "deployments": {
+        "trustnetPackage": {
+          "packageId": null,
+          "status": "production - pending audit"
+        }
+      }
+    }
+  },
+  "circuits": {
+    "transactionMembership": {
+      "circuitFile": "circuits/transaction_membership.circom",
+      "provingKey": "circuits/keys/transaction_membership/circuit_final.zkey",
+      "verificationKey": "circuits/keys/transaction_membership/verification_key.json",
+      "verifierContract": "circuits/keys/transaction_membership/TransactionMembershipVerifier.sol"
+    },
+    "amountCommitment": {
+      "circuitFile": "circuits/amount_commitment.circom",
+      "provingKey": "circuits/keys/amount_commitment/circuit_final.zkey",
+      "verificationKey": "circuits/keys/amount_commitment/verification_key.json",
+      "verifierContract": "circuits/keys/amount_commitment/AmountCommitmentVerifier.sol"
+    }
+  },
+  "metadata": {
+    "projectName": "TrustNet",
+    "version": "1.0.0",
+    "description": "Enterprise Privacy-Preserving Payroll Platform",
+    "repository": "https://github.com/yourusername/trustnet",
+    "license": "MIT"
+  }
+}

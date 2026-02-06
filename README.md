@@ -35,6 +35,21 @@ TrustNet is a production-ready decentralized payroll and transaction management 
 
 ---
 
+## 🌐 Deployed Contracts
+
+### Base Sepolia Testnet (Ethereum L2)
+- **Chain ID:** 84532
+- **Transaction Membership Verifier:** [`0x0d2B09395Ae7C136e77892fC7EEFB0011898A4fe`](https://sepolia.basescan.org/address/0x0d2B09395Ae7C136e77892fC7EEFB0011898A4fe)
+- **Amount Commitment Verifier:** [`0xfcE235771639Bbfc1dfEE7c3b499551ae0C3D414`](https://sepolia.basescan.org/address/0xfcE235771639Bbfc1dfEE7c3b499551ae0C3D414)
+
+### Sui Testnet
+- **Package ID:** [`0xaea2bdfbdab9d4f0ae173214c078e86f3e50d04a5ed8195192dec53729e3dfef`](https://testnet.suivision.xyz/package/0xaea2bdfbdab9d4f0ae173214c078e86f3e50d04a5ed8195192dec53729e3dfef)
+- **Modules:** employee_wallet, organization_registry, payroll_distributor, privacy_pool
+
+📄 **See full deployment details:** [ETHEREUM_DEPLOYMENT.md](./ETHEREUM_DEPLOYMENT.md) | [contracts/DEPLOYMENT.md](./contracts/DEPLOYMENT.md)
+
+---
+
 ## 📋 Prerequisites
 
 - **Node.js**: v18+ (v20+ recommended)
@@ -86,9 +101,15 @@ JWT_SECRET="your-secure-jwt-secret-minimum-32-chars"
 # Sui Blockchain
 SUI_NETWORK="testnet"
 SUI_PRIVATE_KEY="your-sui-private-key"
-ORGANIZATION_REGISTRY_PACKAGE_ID="0x..."
-EMPLOYEE_WALLET_PACKAGE_ID="0x..."
-PRIVACY_POOL_PACKAGE_ID="0x..."
+SUI_PACKAGE_ID="0xaea2bdfbdab9d4f0ae173214c078e86f3e50d04a5ed8195192dec53729e3dfef"
+
+# Ethereum/Base Blockchain
+BASE_RPC_URL="https://base-sepolia.g.alchemy.com/v2/YOUR_API_KEY"
+DEPLOYER_PRIVATE_KEY="0xYourPrivateKey"
+
+# ZK Proof Verifier Contracts (Base Sepolia)
+MEMBERSHIP_VERIFIER_ADDRESS="0x0d2B09395Ae7C136e77892fC7EEFB0011898A4fe"
+AMOUNT_VERIFIER_ADDRESS="0xfcE235771639Bbfc1dfEE7c3b499551ae0C3D414"
 
 # ENS Configuration
 ENS_PROVIDER_URL="https://mainnet.infura.io/v3/YOUR_INFURA_KEY"
