@@ -10,14 +10,24 @@ import { Badge } from '@/components/ui/badge'
 
 type PaymentMethod = 'card' | 'crypto' | 'bank' | 'invoice'
 
+// Extend Window interface for MetaMask
+declare global {
+  interface Window {
+    ethereum?: any
+  }
+}
+
 export default function OrganizationPaymentPage() {
   const router = useRouter()
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethod>('card')
   const [loading, setLoading] = useState(false)
   const [organizationId, setOrganizationId] = useState<string>('')
   const [pricingData, setPricingData] = useState<any>(null)
-  const [usdcAddress, setUsdcAddress] = useState('')
+  const [paymentAddress, setPaymentAddress] = useState('')
+  const [paymentAmount, setPaymentAmount] = useState(0)
   const [copied, setCopied] = useState(false)
+  const [txHash, setTxHash] = useState('')
+  const [paymentSent, setPaymentSent] = useState(false)
 
   useEffect(() => {
     const orgId = sessionStorage.getItem('organizationId')
@@ -42,9 +52,9 @@ export default function OrganizationPaymentPage() {
     },
     {
       id: 'crypto' as const,
-      name: 'Crypto (USDC)',
+      name: 'Crypto (ETH)',
       icon: Wallet,
-      description: 'Pay with USDC on Ethereum',
+      description: 'Pay with Ethereum',
       available: true,
     },
     {
@@ -101,21 +111,75 @@ export default function OrganizationPaymentPage() {
         body: JSON.stringify({
           organizationId,
           paymentMethod: 'crypto',
-          billingCycle: pricingData.billingCycle,
-          employeeCount: pricingData.employeeCount,
         }),
       })
 
-      const data = await response.json()
+      const result = await response.json()
 
-      if (data.success && data.usdcAddress) {
-        setUsdcAddress(data.usdcAddress)
+      if (result.success && result.data?.paymentInfo) {
+        const { paymentAddress, amount } = result.data.paymentInfo
+        setPaymentAddress(paymentAddress)
+        setPaymentAmount(amount)
       } else {
-        alert('Failed to generate payment address')
+        alert('Failed to generate payment address: ' + (result.error || 'Unknown error'))
       }
       setLoading(false)
     } catch (error: any) {
       alert('Error: ' + error.message)
+      setLoading(false)
+    }
+  }
+
+  const sendEthPayment = async () => {
+    if (!window.ethereum) {
+      alert('Please install MetaMask to pay with crypto')
+      return
+    }
+
+    setLoading(true)
+    try {
+      // Request account access
+      const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' })
+      const fromAddress = accounts[0]
+
+      // Convert amount to wei (assuming amount is in ETH)
+      const amountInWei = '0x' + Math.floor(paymentAmount * 1e18).toString(16)
+
+      // Send transaction
+      const transactionHash = await window.ethereum.request({
+        method: 'eth_sendTransaction',
+        params: [{
+          from: fromAddress,
+          to: paymentAddress,
+          value: amountInWei,
+        }],
+      })
+
+      setTxHash(transactionHash)
+      setPaymentSent(true)
+
+      // Verify payment on backend
+      const verifyResponse = await fetch('/api/organization/register/payment/verify-crypto', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          organizationId,
+          txHash: transactionHash,
+        }),
+      })
+
+      const verifyResult = await verifyResponse.json()
+
+      if (verifyResult.success) {
+        alert('Payment verified! Proceeding to verification step.')
+        router.push('/organization/register/verification')
+      } else {
+        alert('Payment sent but verification failed. Please contact support with TX: ' + transactionHash)
+      }
+
+      setLoading(false)
+    } catch (error: any) {
+      alert('Payment failed: ' + error.message)
       setLoading(false)
     }
   }
@@ -196,7 +260,7 @@ export default function OrganizationPaymentPage() {
   }
 
   const copyAddress = () => {
-    navigator.clipboard.writeText(usdcAddress)
+    navigator.clipboard.writeText(paymentAddress)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
@@ -321,7 +385,7 @@ export default function OrganizationPaymentPage() {
         </div>
 
         {/* Crypto Payment Details */}
-        {selectedMethod === 'crypto' && usdcAddress && (
+        {selectedMethod === 'crypto' && paymentAddress && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -329,47 +393,83 @@ export default function OrganizationPaymentPage() {
           >
             <Card className="bg-vault-darker border-vault-slate/20">
               <CardHeader>
-                <CardTitle className="text-white">Send USDC Payment</CardTitle>
-                <CardDescription>Send exactly ${pricingData.totalCost} USDC to this address</CardDescription>
+                <CardTitle className="text-white">Send ETH Payment</CardTitle>
+                <CardDescription>
+                  Send {paymentAmount} ETH to complete your subscription
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  <div className="flex items-center gap-2">
-                    <code className="flex-1 p-3 bg-vault-dark rounded-lg text-vault-green text-sm break-all">
-                      {usdcAddress}
-                    </code>
-                    <Button
-                      size="icon"
-                      variant="outline"
-                      onClick={copyAddress}
-                      className="border-vault-slate/20"
-                    >
-                      {copied ? (
-                        <Check className="h-4 w-4 text-vault-green" />
-                      ) : (
-                        <Copy className="h-4 w-4" />
-                      )}
-                    </Button>
-                  </div>
-                  <div className="p-4 bg-vault-dark rounded-lg text-center">
-                    <div className="w-48 h-48 mx-auto bg-white rounded-lg flex items-center justify-center">
-                      <p className="text-vault-dark text-sm">QR Code</p>
+                  <div>
+                    <label className="text-sm text-vault-slate mb-2 block">Payment Address</label>
+                    <div className="flex items-center gap-2 bg-vault-dark p-3 rounded-lg border border-vault-slate/20">
+                      <code className="flex-1 text-white text-sm break-all">{paymentAddress}</code>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={copyAddress}
+                        className="text-vault-green hover:text-vault-green/80"
+                      >
+                        {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                      </Button>
                     </div>
                   </div>
-                  <div className="text-sm text-vault-slate space-y-1">
-                    <p>• Network: Ethereum Mainnet</p>
-                    <p>• Token: USDC</p>
-                    <p>• Amount: ${pricingData.totalCost} USDC</p>
-                    <p>• Payment will be verified within 5-10 minutes</p>
+
+                  <div>
+                    <label className="text-sm text-vault-slate mb-2 block">Amount</label>
+                    <div className="bg-vault-dark p-3 rounded-lg border border-vault-slate/20">
+                      <p className="text-white font-mono text-lg">{paymentAmount} ETH</p>
+                    </div>
                   </div>
+
+                  <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-4">
+                    <p className="text-amber-500 text-sm">
+                      ⚠️ <strong>Important:</strong> Send exactly {paymentAmount} ETH to the address above using your MetaMask wallet. Click "Pay with MetaMask" button below for easy payment.
+                    </p>
+                  </div>
+
+                  {paymentSent && txHash && (
+                    <div className="bg-vault-green/10 border border-vault-green/20 rounded-lg p-4">
+                      <p className="text-vault-green text-sm flex items-center gap-2">
+                        <Check className="w-4 h-4" />
+                        <strong>Payment sent!</strong>
+                      </p>
+                      <p className="text-vault-slate text-xs mt-1">
+                        TX: {txHash.slice(0, 10)}...{txHash.slice(-8)}
+                      </p>
+                    </div>
+                  )}
+
+                  <Button
+                    onClick={sendEthPayment}
+                    disabled={loading || paymentSent}
+                    className="w-full bg-vault-green hover:bg-vault-green/90 text-white"
+                  >
+                    {loading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Processing...
+                      </>
+                    ) : paymentSent ? (
+                      <>
+                        <Check className="mr-2 h-4 w-4" />
+                        Payment Sent
+                      </>
+                    ) : (
+                      <>
+                        <Wallet className="mr-2 h-4 w-4" />
+                        Pay with MetaMask
+                      </>
+                    )}
+                  </Button>
                 </div>
               </CardContent>
             </Card>
           </motion.div>
         )}
 
-        {/* Submit Button */}
-        {!(selectedMethod === 'crypto' && usdcAddress) && (
+        {/* Submit Button - Show for non-crypto or when crypto address not generated */}
+        {!(selectedMethod === 'crypto' && paymentAddress) && (
           <Button
             onClick={handlePayment}
             disabled={loading}
@@ -379,6 +479,10 @@ export default function OrganizationPaymentPage() {
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Processing...
+              </>
+            ) : selectedMethod === 'crypto' ? (
+              <>
+                Generate Payment Address
               </>
             ) : (
               <>

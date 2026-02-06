@@ -47,7 +47,19 @@ const httpServer = http.createServer(app);
 
 // Security Middleware
 app.use(securityMiddleware.helmetConfig());
-app.use(cors(securityMiddleware.corsOptions()));
+
+// Simpler CORS for development - allow everything
+if (process.env.NODE_ENV !== 'production') {
+  app.use(cors({
+    origin: true,
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  }));
+} else {
+  app.use(cors(securityMiddleware.corsOptions()));
+}
+
 app.use(securityMiddleware.sanitizeInputs());
 app.use(securityMiddleware.generalRateLimiter());
 

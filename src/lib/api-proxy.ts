@@ -7,58 +7,72 @@ export async function proxyToBackend(
   method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' = 'POST',
   body?: any
 ) {
+  const url = `${BACKEND_URL}${endpoint}`
+  console.log('🔵 [API PROXY] Starting request to:', url)
+  console.log('🔵 [API PROXY] Method:', method)
+  console.log('🔵 [API PROXY] BACKEND_URL:', BACKEND_URL)
+  
   try {
     const options: RequestInit = {
       method,
       headers: {
         'Content-Type': 'application/json',
       },
+      // Add timeout to prevent hanging
+      signal: AbortSignal.timeout(10000), // 10 second timeout
     }
 
     if (body && (method === 'POST' || method === 'PUT' || method === 'PATCH')) {
       options.body = JSON.stringify(body)
+      console.log('📤 [API PROXY] Request body keys:', Object.keys(body))
     }
 
-    const response = await fetch(`${BACKEND_URL}${endpoint}`, options)
+    console.log('⏳ [API PROXY] Sending fetch request...')
+    const response = await fetch(url, options)
+    console.log('📥 [API PROXY] Got response! Status:', response.status, response.statusText)
+    console.log('📥 [API PROXY] Response headers:', Object.fromEntries(response.headers.entries()))
 
-    // Try to get response text first
     const text = await response.text()
+    console.log('📥 [API PROXY] Response text length:', text.length)
+    console.log('📥 [API PROXY] Response text:', text.substring(0, 500))
     
-    // Log for debugging
-    console.error('Backend response:', {
-      status: response.status,
-      statusText: response.statusText,
-      headers: Object.fromEntries(response.headers.entries()),
-      body: text.substring(0, 500)
-    })
-    
-    // Try to parse as JSON
-    let data: any
-    if (text && text.trim()) {
-      try {
-        data = JSON.parse(text)
-      } catch (parseError) {
-        console.error('JSON Parse Error:', parseError)
-        return NextResponse.json(
-          { success: false, error: `Backend returned invalid JSON: ${text.substring(0, 200)}` },
-          { status: response.status }
-        )
-      }
+    if (!text || !text.trim()) {
+      console.error('⚠️ [API PROXY] Empty response body!')
+      return NextResponse.json(
+        { success: false, error: `Empty response from backend (status: ${response.status})` }, 
+        { status: response.status || 500 }
+      )
     }
     
-    // Return the actual backend response
-    return NextResponse.json(data || { success: false, error: 'Empty response' }, { status: response.status })
+    try {
+      const data = JSON.parse(text)
+      console.log('✅ [API PROXY] Successfully parsed JSON')
+      return NextResponse.json(data, { status: response.status })
+    } catch (parseError) {
+      console.error('❌ [API PROXY] JSON Parse Error:', parseError)
+      return NextResponse.json(
+        { success: false, error: `Invalid JSON: ${text.substring(0, 200)}` },
+        { status: 500 }
+      )
+    }
     
   } catch (error: any) {
-    // Connection error or other failure
-    console.error('Backend Proxy Error:', error)
+    console.error('❌ [API PROXY] Caught error:', error)
+    console.error('❌ [API PROXY] Error name:', error.name)
+    console.error('❌ [API PROXY] Error message:', error.message)
+    console.error('❌ [API PROXY] Error cause:', error.cause)
     
-    const errorMessage = error.cause?.code === 'ECONNREFUSED'
-      ? 'Backend server is not running. Please start the backend on port 5001.'
-      : error.message || 'An unexpected error occurred'
+    let errorMessage = 'Unknown error'
+    if (error.name === 'AbortError') {
+      errorMessage = 'Backend request timed out after 10 seconds'
+    } else if (error.cause?.code === 'ECONNREFUSED') {
+      errorMessage = 'Cannot connect to backend on port 5001 - is it running?'
+    } else {
+      errorMessage = error.message || 'Network error'
+    }
     
     return NextResponse.json(
-      { success: false, error: errorMessage },
+      { success: false, error: errorMessage, details: error.toString() },
       { status: 500 }
     )
   }
