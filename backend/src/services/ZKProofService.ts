@@ -22,7 +22,8 @@ class ZKProofService {
       .update(employeeSecret)
       .digest('hex');
 
-    const leafIndex = tree.leaves.find(l => l.hash === leafHash)?.index;
+    const leaves = (tree.leaves as any) || [];
+    const leafIndex = leaves.find((l: any) => l.hash === leafHash)?.index;
     if (leafIndex === undefined) {
       throw new Error('Employee not part of Merkle tree');
     }
@@ -31,7 +32,7 @@ class ZKProofService {
     return {
       proof: `zk-proof-${leafIndex}`,
       publicSignals: {
-        root: tree.root,
+        root: tree.treeRoot,
         index: leafIndex,
       },
     };

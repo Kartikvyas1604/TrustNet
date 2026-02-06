@@ -2,6 +2,7 @@ import crypto from 'crypto';
 import Transaction, { ITransaction } from '../models/Transaction';
 import Employee from '../models/Employee';
 import Organization from '../models/Organization';
+import { prisma } from '../config/database';
 
 // Encryption utility functions
 const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || crypto.randomBytes(32).toString('hex');
@@ -49,13 +50,13 @@ class TransactionService {
   async sendTransaction(input: SendTransactionInput): Promise<ITransaction> {
   // Validate sender
   const fromEmployee = await Employee.findOne({ employeeId: input.fromEmployeeId });
-  if (!fromEmployee || fromEmployee.status !== 'active') {
+  if (!fromEmployee || fromEmployee.status !== 'ACTIVE') {
     throw new Error('Sender employee not found or inactive');
   }
 
   // Validate receiver
   const toEmployee = await Employee.findOne({ employeeId: input.toEmployeeId });
-  if (!toEmployee || toEmployee.status !== 'active') {
+  if (!toEmployee || toEmployee.status !== 'ACTIVE') {
     throw new Error('Receiver employee not found or inactive');
   }
 
@@ -81,21 +82,25 @@ class TransactionService {
   });
 
   // 🧾 Create transaction record (NO PLAINTEXT DATA)
-  const transaction = new Transaction({
-    transactionId,
-    organizationId: fromEmployee.organizationId,
-    encryptedPayload, // ✅ encrypted internal data
-    currency: input.currency || 'USDC',
-    chain: input.chain,
-    transactionType: input.transactionType || 'standard',
-    privacyLevel: input.privacyLevel || 'organization-only',
-    status: 'pending',
-  });
-
-  await transaction.save();
+  const transaction = await prisma.transaction.create({
+    data: {
+      transactionId,
+      organizationId: fromEmployee.organizationId,
+      fromEmployeeId: input.fromEmployeeId,
+      toEmployeeId: input.toEmployeeId,
+      amount: input.amount.toString(),
+      encryptedDetails: encryptedPayload, // ✅ encrypted internal data
+      currency: input.currency || 'USDC',
+      chain: input.chain,
+      transactionType: (input.transactionType || 'STANDARD').toUpperCase().replace(/-/g, '_') as any,
+      privacyLevel: (input.privacyLevel || 'ORGANIZATION_ONLY').toUpperCase().replace(/-/g, '_') as any,
+      status: 'PENDING',
+      timestamp: new Date(),
+    },
+  }) as any;
 
   // Simulate instant confirmation for off-chain transactions
-  if (input.transactionType === 'yellow_offchain') {
+  if (input.transactionType && input.transactionType.toUpperCase().replace(/-/g, '_') === 'YELLOW_OFFCHAIN') {
     setTimeout(async () => {
       await this.confirmTransaction(transactionId, 'offchain_instant');
     }, 100);
@@ -116,14 +121,13 @@ class TransactionService {
     transactionId: string,
     blockchainTxHash?: string
   ): Promise<ITransaction | null> {
-    const transaction = await Transaction.findOneAndUpdate(
-      { transactionId },
-      {
-        status: 'confirmed',
+    const transaction = await prisma.transaction.update({
+      where: { transactionId },
+      data: {
+        status: 'CONFIRMED',
         ...(blockchainTxHash && { blockchainTxHash }),
       },
-      { new: true }
-    );
+    }) as any;
 
     if (!transaction) {
       throw new Error('Transaction not found');
@@ -144,11 +148,20 @@ class TransactionService {
    * Get employee transactions (sent and received)
    */
   async getEmployeeTransactions(employeeId: string, limit: number = 50): Promise<ITransaction[]> {
-    return await Transaction.find({
-      $or: [{ fromEmployeeId: employeeId }, { toEmployeeId: employeeId }],
-    })
-      .sort({ timestamp: -1 })
-      .limit(limit);
+    const transactions = await prisma.transaction.findMany({
+      where: {},
+      orderBy: { timestamp: 'desc' },
+      take: limit,
+    });
+    // Filter in memory for encrypted fields
+    return transactions.filter((tx: any) => {
+      try {
+        const decrypted = decrypt(tx.encryptedPayload);
+        return decrypted.fromEmployeeId === employeeId || decrypted.toEmployeeId === employeeId;
+      } catch {
+        return false;
+      }
+    }) as any;
   }
 
   /**
@@ -158,11 +171,11 @@ class TransactionService {
     organizationId: string,
     limit: number = 100
   ): Promise<ITransaction[]> {
-    return await Transaction.find({
-      organizationId,
-    })
-      .sort({ timestamp: -1 })
-      .limit(limit);
+    return await prisma.transaction.findMany({
+      where: { organizationId },
+      orderBy: { timestamp: 'desc' },
+      take: limit,
+    }) as any;
   }
 
   /**
@@ -174,38 +187,36 @@ class TransactionService {
       throw new Error('Employee not found');
     }
 
-    const sent = await Transaction.aggregate([
-      { $match: { fromEmployeeId: employeeId, status: 'confirmed' } },
-      {
-        $group: {
-          _id: null,
-          totalAmount: { $sum: '$amount' },
-          count: { $sum: 1 },
-        },
-      },
-    ]);
+    // Simplified stats without aggregate
+    const allTransactions = await prisma.transaction.findMany({
+      where: { status: 'CONFIRMED' },
+    });
 
-    const received = await Transaction.aggregate([
-      { $match: { toEmployeeId: employeeId, status: 'confirmed' } },
-      {
-        $group: {
-          _id: null,
-          totalAmount: { $sum: '$amount' },
-          count: { $sum: 1 },
-        },
-      },
-    ]);
+    let sentTotal = 0, sentCount = 0, receivedTotal = 0, receivedCount = 0;
+    allTransactions.forEach((tx: any) => {
+      try {
+        const decrypted = decrypt(tx.encryptedPayload);
+        if (decrypted.fromEmployeeId === employeeId) {
+          sentTotal += Number(decrypted.amount || 0);
+          sentCount++;
+        }
+        if (decrypted.toEmployeeId === employeeId) {
+          receivedTotal += Number(decrypted.amount || 0);
+          receivedCount++;
+        }
+      } catch {}
+    });
 
     return {
       sent: {
-        totalAmount: sent[0]?.totalAmount || 0,
-        count: sent[0]?.count || 0,
+        totalAmount: sentTotal,
+        count: sentCount,
       },
       received: {
-        totalAmount: received[0]?.totalAmount || 0,
-        count: received[0]?.count || 0,
+        totalAmount: receivedTotal,
+        count: receivedCount,
       },
-      netBalance: (received[0]?.totalAmount || 0) - (sent[0]?.totalAmount || 0),
+      netBalance: receivedTotal - sentTotal,
     };
   }
 
@@ -218,43 +229,42 @@ class TransactionService {
       throw new Error('Organization not found');
     }
 
-    const stats = await Transaction.aggregate([
-      { $match: { organizationId, status: 'confirmed' } },
-      {
-        $group: {
-          _id: null,
-          totalVolume: { $sum: '$amount' },
-          totalTransactions: { $sum: 1 },
-          avgTransactionSize: { $avg: '$amount' },
-        },
-      },
-    ]);
+    // Simplified stats
+    const confirmedTxs = await prisma.transaction.findMany({
+      where: { organizationId, status: 'CONFIRMED' },
+      orderBy: { timestamp: 'desc' },
+      take: 100,
+    });
 
-    const byType = await Transaction.aggregate([
-      { $match: { organizationId, status: 'confirmed' } },
-      {
-        $group: {
-          _id: '$transactionType',
-          count: { $sum: 1 },
-          volume: { $sum: '$amount' },
-        },
-      },
-    ]);
+    let totalVolume = 0, totalCount = 0;
+    const typeStats: any = {};
+    
+    confirmedTxs.forEach((tx: any) => {
+      totalCount++;
+      try {
+        const decrypted = decrypt(tx.encryptedPayload);
+        const amount = Number(decrypted.amount || 0);
+        totalVolume += amount;
+        const type = tx.transactionType || 'unknown';
+        if (!typeStats[type]) typeStats[type] = { count: 0, volume: 0 };
+        typeStats[type].count++;
+        typeStats[type].volume += amount;
+      } catch {}
+    });
 
-    const recent = await Transaction.find({
-      organizationId,
-      status: 'confirmed',
-    })
-      .sort({ timestamp: -1 })
-      .limit(10);
+    const recent = confirmedTxs.slice(0, 10);
 
     return {
       overview: {
-        totalVolume: stats[0]?.totalVolume || 0,
-        totalTransactions: stats[0]?.totalTransactions || 0,
-        avgTransactionSize: stats[0]?.avgTransactionSize || 0,
+        totalVolume,
+        totalTransactions: totalCount,
+        avgTransactionSize: totalCount > 0 ? totalVolume / totalCount : 0,
       },
-      byType,
+      byType: Object.entries(typeStats).map(([type, data]: [string, any]) => ({
+        _id: type,
+        count: data.count,
+        volume: data.volume,
+      })),
       recentTransactions: recent,
     };
   }
@@ -263,16 +273,13 @@ class TransactionService {
    * Mark transaction as failed
    */
   async failTransaction(transactionId: string, reason?: string): Promise<ITransaction | null> {
-    const transaction = await Transaction.findOneAndUpdate(
-      { transactionId },
-      {
-        status: 'failed',
-        ...(reason && {
-          'metadata.failureReason': reason,
-        }),
+    const transaction = await prisma.transaction.update({
+      where: { transactionId },
+      data: {
+        status: 'FAILED',
+        metadata: reason ? { failureReason: reason } as any : undefined,
       },
-      { new: true }
-    );
+    }) as any;
 
     if (!transaction) {
       throw new Error('Transaction not found');
@@ -286,10 +293,19 @@ class TransactionService {
    * Get pending transactions for employee
    */
   async getPendingTransactions(employeeId: string): Promise<ITransaction[]> {
-    return await Transaction.find({
-      $or: [{ fromEmployeeId: employeeId }, { toEmployeeId: employeeId }],
-      status: 'pending',
-    }).sort({ timestamp: -1 });
+    const allTxs = await prisma.transaction.findMany({
+      where: { status: 'PENDING' },
+      orderBy: { timestamp: 'desc' },
+    });
+    // Filter in memory for encrypted fields
+    return allTxs.filter((tx: any) => {
+      try {
+        const decrypted = decrypt(tx.encryptedPayload);
+        return decrypted.fromEmployeeId === employeeId || decrypted.toEmployeeId === employeeId;
+      } catch {
+        return false;
+      }
+    }) as any;
   }
 }
 

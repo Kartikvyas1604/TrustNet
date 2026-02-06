@@ -50,7 +50,7 @@ class TransactionOrchestrationService {
       const transactionType = this.determineTransactionType(
         amount,
         request.chain,
-        request.privacyLevel
+        request.privacyLevel as PrivacyLevel | undefined
       );
       
       // 6. Create transaction record

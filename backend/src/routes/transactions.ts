@@ -64,12 +64,18 @@ router.post('/orchestrated', async (req: Request, res: Response) => {
 
     // Validate required fields
     if (!organizationId || !employeeId || !recipient || !amount) {
-      return sendValidationError(res, 'Missing required fields: organizationId, employeeId, recipient, amount');
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required fields: organizationId, employeeId, recipient, amount'
+      });
     }
 
     // Validate amount
     if (!isValidAmount(amount)) {
-      return sendValidationError(res, 'Invalid amount format');
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid amount format'
+      });
     }
 
     // Process transaction through orchestration service
@@ -83,13 +89,19 @@ router.post('/orchestrated', async (req: Request, res: Response) => {
       chain: 'sui',
       privacyLevel: (privacyLevel as any) || 'ORGANIZATION_ONLY',
       memo,
-      metadata,
     });
 
     // Return success response
-    return sendSuccess(res, result, 'Transaction processed successfully', 201);
+    return res.status(201).json({
+      success: true,
+      data: result,
+      message: 'Transaction processed successfully'
+    });
   } catch (error: any) {
-    return sendError(res, error.message, 400);
+    return res.status(400).json({
+      success: false,
+      error: error.message
+    });
   }
 });
 

@@ -5,6 +5,7 @@ import redisService from './RedisService';
 import Employee from '../models/Employee';
 import Transaction from '../models/Transaction';
 import Organization from '../models/Organization';
+import { prisma } from '../config/database';
 
 interface CronTask {
   name: string;
@@ -178,17 +179,26 @@ class CronService {
       let settledCount = 0;
 
       for (const employee of employees) {
-        for (const channel of employee.channels) {
+        const channels = (employee.channels as any) || [];
+        let hasChanges = false;
+        
+        for (const channel of channels) {
           if (channel.status === 'open') {
             // Simulate channel settlement logic
             channel.status = 'settled';
             settledCount++;
+            hasChanges = true;
             
             logger.debug(`Settled channel ${channel.channelId} for employee ${employee.employeeId}`);
           }
         }
 
-        await employee.save();
+        if (hasChanges) {
+          await prisma.employee.update({
+            where: { id: employee.id },
+            data: { channels: channels as any },
+          });
+        }
 
         // Emit update to employee
         if (employee.employeeId) {
@@ -303,7 +313,7 @@ class CronService {
           metrics: {
             totalTransactions: transactions.length,
             totalEmployees: employees.length,
-            activeEmployees: employees.filter(e => e.status === 'active').length,
+            activeEmployees: employees.filter((e: any) => e.status === 'ACTIVE').length,
           },
         };
 
@@ -334,19 +344,19 @@ class CronService {
       // This would be handled by Redis TTL, but we can verify
 
       // Clean up old inactive employees (revoked for 6+ months)
-      const result = await Employee.deleteMany({
+      const result = await prisma.employee.deleteMany({
         where: {
           status: 'REVOKED',
           updatedAt: { lt: sixMonthsAgo },
-        }
+        },
       });
 
       logger.info(`Cleaned up ${result.count || 0} old inactive employees`);
       // Archive old transactions (optional - currently just logging)
-      const oldTransactionCount = await Transaction.count({
+      const oldTransactionCount = await prisma.transaction.count({
         where: {
-          createdAt: { lt: sixMonthsAgo },
-        }
+          timestamp: { lt: sixMonthsAgo },
+        },
       });
 
       logger.info(`Found ${oldTransactionCount} transactions older than 6 months (archival recommended)`);

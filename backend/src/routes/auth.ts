@@ -4,6 +4,7 @@ import securityMiddleware from '../middleware/SecurityMiddleware';
 import logger from '../utils/logger';
 import { body } from 'express-validator';
 import Employee from '../models/Employee';
+import { prisma } from '../config/database';
 
 const router: Router = express.Router();
 
@@ -73,14 +74,15 @@ router.post(
       }
 
       // Check if employee exists
-      const employee = await Employee.findFirst({
+      const employees = await prisma.employee.findMany({
         where: {
-          walletAddresses: {
-            path: ['ethereum'],
-            equals: verificationResult.address
-          },
           status: 'ACTIVE',
         }
+      });
+      
+      const employee = employees.find((emp: any) => {
+        const wallets = emp.walletAddresses as any;
+        return wallets?.ethereum === verificationResult.address;
       });
 
       if (!employee) {

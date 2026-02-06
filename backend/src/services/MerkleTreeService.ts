@@ -1,5 +1,6 @@
 import crypto from 'crypto';
 import MerkleTree from '../models/MerkleTree';
+import { prisma } from '../config/database';
 
 class MerkleTreeService {
   hash(data: string): string {
@@ -7,13 +8,18 @@ class MerkleTreeService {
   }
 
   async getTree(orgId: string) {
-    let tree = await MerkleTree.findOne({ organizationId: orgId });
+    let tree = await prisma.merkleTree.findFirst({ where: { organizationId: orgId } });
 
     if (!tree) {
-      tree = await MerkleTree.create({
-        organizationId: orgId,
-        root: this.hash('GENESIS'),
-        leaves: [],
+      tree = await prisma.merkleTree.create({
+        data: {
+          organizationId: orgId,
+          treeRoot: this.hash('GENESIS'),
+          treeHeight: 0,
+          leaves: [] as any,
+          previousRoots: [] as any,
+          lastUpdatedAt: new Date(),
+        },
       });
     }
 
@@ -24,14 +30,25 @@ class MerkleTreeService {
     const tree = await this.getTree(orgId);
 
     const leafHash = this.hash(leafData);
-    tree.leaves.push({ index: tree.leaves.length, hash: leafHash });
+    const leaves = (tree.leaves as any) || [];
+    const newLeaves = [...leaves, { index: leaves.length, hash: leafHash }];
 
-    tree.root = this.computeRoot(tree.leaves.map(l => l.hash));
-    tree.version += 1;
-    tree.updatedAt = new Date();
+    const newRoot = this.computeRoot(newLeaves.map((l: any) => l.hash));
+    
+    const previousRoots = (tree.previousRoots as any) || [];
+    const updatedPreviousRoots = [...previousRoots, tree.treeRoot];
 
-    await tree.save();
-    return tree;
+    const updatedTree = await prisma.merkleTree.update({
+      where: { id: tree.id },
+      data: {
+        leaves: newLeaves as any,
+        treeRoot: newRoot,
+        previousRoots: updatedPreviousRoots as any,
+        lastUpdatedAt: new Date(),
+      },
+    });
+
+    return updatedTree;
   }
 
   computeRoot(leaves: string[]): string {

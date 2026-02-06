@@ -2,6 +2,7 @@ import crypto from 'crypto';
 import bcrypt from 'bcrypt';
 import Organization, { IOrganization } from '../models/Organization';
 import AuthKey from '../models/AuthKey';
+import { prisma } from '../config/database';
 
 interface RegisterOrganizationInput {
   name: string;
@@ -39,27 +40,27 @@ class OrganizationService {
     };
 
     // Create organization
-    const organization = new Organization({
-      organizationId,
-      name: input.name,
-      registrationNumber: input.registrationNumber,
-      country: input.country,
-      kycStatus: 'pending',
-      subscriptionTier: input.subscriptionTier,
-      employeeLimit: employeeLimits[input.subscriptionTier],
-      adminWallets: [
-        {
-          address: input.adminWallet,
-          role: 'owner',
-        },
-      ],
-      metadata: {
-        contactEmail: input.contactEmail,
-        contactPerson: input.contactPerson,
+    const organization = await prisma.organization.create({
+      data: {
+        organizationId,
+        name: input.name,
+        registrationNumber: input.registrationNumber,
+        country: input.country,
+        kycStatus: 'PENDING',
+        subscriptionTier: input.subscriptionTier.toUpperCase() as any,
+        employeeLimit: employeeLimits[input.subscriptionTier],
+        adminWallets: [
+          {
+            address: input.adminWallet,
+            role: 'owner',
+          },
+        ] as any,
+        metadata: {
+          contactEmail: input.contactEmail,
+          contactPerson: input.contactPerson,
+        } as any,
       },
-    });
-
-    await organization.save();
+    }) as any;
 
     console.log(`Organization registered: ${organizationId}`);
     return organization;
@@ -73,14 +74,13 @@ class OrganizationService {
     status: 'approved' | 'rejected',
     documents?: string[]
   ): Promise<IOrganization | null> {
-    const organization = await Organization.findOneAndUpdate(
-      { organizationId },
-      {
-        kycStatus: status,
-        ...(documents && { kycDocuments: documents }),
+    const organization = await prisma.organization.update({
+      where: { organizationId },
+      data: {
+        kycStatus: status.toUpperCase() as any,
+        ...(documents && { kycDocuments: documents as any }),
       },
-      { new: true }
-    );
+    }) as any;
 
     if (!organization) {
       throw new Error('Organization not found');
@@ -104,7 +104,7 @@ class OrganizationService {
       throw new Error('Organization not found');
     }
 
-    if (organization.kycStatus !== 'approved') {
+    if (organization.kycStatus !== 'APPROVED') {
       throw new Error('Organization must complete KYC before generating auth keys');
     }
 
@@ -131,12 +131,14 @@ class OrganizationService {
       const keyHash = await bcrypt.hash(key, 10);
 
       // Store in database
-      await AuthKey.create({
-        keyHash,
-        organizationId,
-        status: 'unused',
-        metadata: {
-          generatedBy,
+      await prisma.authKey.create({
+        data: {
+          keyHash,
+          organizationId,
+          status: 'UNUSED',
+          metadata: {
+            generatedBy,
+          } as any,
         },
       });
 
@@ -151,16 +153,18 @@ class OrganizationService {
    * Get organization details
    */
   async getOrganization(organizationId: string): Promise<IOrganization | null> {
-    return await Organization.findOne({ organizationId });
+    return await prisma.organization.findFirst({ where: { organizationId } }) as any;
   }
 
   /**
    * Get organization by admin wallet
    */
   async getOrganizationByAdmin(adminWallet: string): Promise<IOrganization | null> {
-    return await Organization.findOne({
-      'adminWallets.address': adminWallet,
-    });
+    const orgs = await prisma.organization.findMany();
+    return orgs.find(org => {
+      const wallets = org.adminWallets as any;
+      return Array.isArray(wallets) && wallets.some((w: any) => w.address === adminWallet);
+    }) as any || null;
   }
 
   /**
@@ -174,11 +178,10 @@ class OrganizationService {
       base?: string;
     }
   ): Promise<IOrganization | null> {
-    const organization = await Organization.findOneAndUpdate(
-      { organizationId },
-      { treasuryAddresses },
-      { new: true }
-    );
+    const organization = await prisma.organization.update({
+      where: { organizationId },
+      data: { treasuryAddresses: treasuryAddresses as any },
+    }) as any;
 
     if (!organization) {
       throw new Error('Organization not found');
@@ -192,9 +195,11 @@ class OrganizationService {
    * Get available auth keys count
    */
   async getAvailableKeysCount(organizationId: string): Promise<number> {
-    return await AuthKey.countDocuments({
-      organizationId,
-      status: 'unused',
+    return await prisma.authKey.count({
+      where: {
+        organizationId,
+        status: 'UNUSED',
+      },
     });
   }
 
@@ -202,19 +207,23 @@ class OrganizationService {
    * Get organization statistics
    */
   async getOrganizationStats(organizationId: string) {
-    const organization = await Organization.findOne({ organizationId });
+    const organization = await prisma.organization.findFirst({ where: { organizationId } });
     if (!organization) {
       throw new Error('Organization not found');
     }
 
-    const totalKeys = await AuthKey.countDocuments({ organizationId });
-    const usedKeys = await AuthKey.countDocuments({
-      organizationId,
-      status: 'active',
+    const totalKeys = await prisma.authKey.count({ where: { organizationId } });
+    const usedKeys = await prisma.authKey.count({
+      where: {
+        organizationId,
+        status: 'ACTIVE',
+      },
     });
-    const unusedKeys = await AuthKey.countDocuments({
-      organizationId,
-      status: 'unused',
+    const unusedKeys = await prisma.authKey.count({
+      where: {
+        organizationId,
+        status: 'UNUSED',
+      },
     });
 
     return {

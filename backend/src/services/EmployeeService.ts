@@ -75,12 +75,12 @@ class EmployeeService {
       walletAddresses,
       authKeyHash,
       ensName,
-      profileData: input.profileData || {},
+      profileData: input.profileData ? JSON.parse(JSON.stringify(input.profileData)) : {},
       status: 'ACTIVE',
-      privacyPreferences: {
+      privacyPreferences: JSON.parse(JSON.stringify({
         defaultPrivacyLevel: 'ORGANIZATION_ONLY',
         preferredChain: input.chain,
-      }
+      }))
     });
 
     // Add employee to organization's Merkle tree
@@ -90,22 +90,25 @@ class EmployeeService {
     );
 
     // Update auth key status
-    await AuthKey.update(matchedKey.id, {
-      status: 'ACTIVE',
-      assignedEmployeeId: employeeId,
-      usedAt: new Date(),
-    });
+    await AuthKey.update(
+      { id: matchedKey.id },
+      {
+        status: 'ACTIVE',
+        assignedEmployeeId: employeeId,
+        usedAt: new Date(),
+      }
+    );
 
     logger.info(`Employee onboarded: ${employeeId} for organization: ${matchedKey.organizationId}`);
     
-    return employee;
+    return employee as any;
   }
 
   /**
    * Get employee by ID
    */
   async getEmployee(employeeId: string): Promise<IEmployee | null> {
-    return await EmployeeModel.findByEmployeeId(employeeId);
+    return await EmployeeModel.findByEmployeeId(employeeId) as any;
   }
 
   /**
@@ -113,7 +116,7 @@ class EmployeeService {
    */
   async getEmployeeByWallet(walletAddress: string): Promise<IEmployee | null> {
     const employees = await EmployeeModel.findByWallet(walletAddress);
-    return employees.length > 0 ? employees[0] : null;
+    return employees.length > 0 ? employees[0] as any : null;
   }
 
   /**
@@ -128,7 +131,7 @@ class EmployeeService {
       orderBy: {
         onboardingDate: 'desc'
       }
-    });
+    }) as any;
   }
 
   /**
@@ -163,7 +166,7 @@ class EmployeeService {
     );
 
     logger.info(`Added ${chain} wallet for employee: ${employeeId}`);
-    return updatedEmployee;
+    return updatedEmployee as any;
   }
 
   /**
@@ -193,7 +196,7 @@ class EmployeeService {
     );
 
     logger.info(`Updated profile for employee: ${employeeId}`);
-    return updatedEmployee;
+    return updatedEmployee as any;
   }
 
   /**
@@ -209,7 +212,7 @@ class EmployeeService {
     );
 
     logger.info(`Updated status for employee ${employeeId} to ${status}`);
-    return updatedEmployee;
+    return updatedEmployee as any;
   }
 
   /**

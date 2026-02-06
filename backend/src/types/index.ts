@@ -285,6 +285,8 @@ export interface OnboardEmployeeRequest {
   signature: string;
   chain: string;
   profileData?: EmployeeProfile;
+  nickname?: string;
+  email?: string;
 }
 
 // Transaction Request
@@ -296,8 +298,10 @@ export interface CreateTransactionRequest {
   amount: string;
   currency: string;
   chain?: string;
-  privacyLevel?: PrivacyLevel;
+  transactionType?: TransactionType;
+  privacyLevel?: PrivacyLevel | string;
   memo?: string;
+  metadata?: Record<string, any>;
 }
 
 // ============================================================================
