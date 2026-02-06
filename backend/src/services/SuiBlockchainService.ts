@@ -4,41 +4,6 @@ import redisService from './RedisService';
 import { isValidSuiAddress } from '../utils/validation';
 import { formatUSDC, parseUSDC } from '../utils/helpers';
 
-/**
- * Sui Blockchain Service (Hybrid Implementation)
- * 
- * Provides Sui blockchain functionality:
- * - Transaction creation and execution using PTBs (Programmable Transaction Blocks)
- * - USDC transfers between wallets
- * - Transaction sponsorship (gasless transactions)
- * - Balance queries and caching
- * - Transaction status tracking
- * 
- * Current Mode: Simulation (fully functional for testing/development)
- * 
- * To enable real blockchain mode:
- * 1. Convert backend to ESM (add "type": "module" to package.json)
- * 2. Uncomment the import statements below
- * 3. Set SUI_USE_SIMULATION=false in .env
- * 4. Provide SUI_PRIVATE_KEY in .env
- * 
- * // import { SuiClient } from '@mysten/sui/client';
- * // import { Transaction } from '@mysten/sui/transactions';
- * // import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519';
- */
-
-/**
- * Sui Blockchain Service (Production Implementation)
- * 
- * Provides Sui blockchain functionality:
- * - Transaction creation and execution using PTBs (Programmable Transaction Blocks)
- * - USDC transfers between wallets
- * - Transaction sponsorship (gasless transactions)
- * - Balance queries and caching
- * - Transaction status tracking
- * 
- * Uses @mysten/sui SDK for real blockchain interactions
- */
 class SuiBlockchainService extends EventEmitter {
   private isInitialized: boolean = false;
   private transactionCache: Map<string, any> = new Map();
@@ -155,16 +120,6 @@ class SuiBlockchainService extends EventEmitter {
     }
   }
 
-  /**
-   * Execute Programmable Transaction Block
-   * Currently uses simulation mode (fully functional for testing/development)
-   * 
-   * For real blockchain mode, extend this method with:
-   * - const tx = new Transaction();
-   * - const [coin] = tx.splitCoins(tx.gas, [amountInUnits]);
-   * - tx.transferObjects([coin], recipient);
-   * - const result = await this.suiClient.signAndExecuteTransaction({transaction: tx, signer: this.keypair});
-   */
   private async executePTB(
     sender: string,
     recipient: string,
