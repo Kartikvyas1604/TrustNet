@@ -1,11 +1,12 @@
 'use client'
 
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Search, Filter, MoreHorizontal, UserPlus, Shield, Wifi, WifiOff } from 'lucide-react'
+import { Search, Filter, MoreHorizontal, UserPlus, Shield, Wifi, WifiOff, XCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { apiClient, type EmployeeResponse, type OnboardEmployeeRequest } from '@/lib/api-client'
 
 const employees: any[] = []
 
@@ -23,6 +24,159 @@ const itemVariants = {
 }
 
 export default function EmployeesPage() {
+  const [employees, setEmployees] = useState<EmployeeResponse[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [searchTerm, setSearchTerm] = useState('')
+  const [showOnboarding, setShowOnboarding] = useState(false)
+  const [onboardingData, setOnboardingData] = useState({
+    authKey: '',
+    walletAddress: '',
+    chain: 'ethereum',
+    nickname: '',
+    email: '',
+  })
+  const [onboardingError, setOnboardingError] = useState('')
+  const [isOnboarding, setIsOnboarding] = useState(false)
+
+  // Demo organization ID - would come from auth context in production
+  const organizationId = 'ORG-TECHCORP-001'
+
+                  className="gap-2 bg-vault-green text-black hover:bg-vault-green/90"
+                  onClick={() => setShowOnboarding(!showOnboarding)}
+                >
+                    <UserPlus size={16} /> {showOnboarding ? 'Cancel' : 'Onboard Employee'}
+    loadEmployees()
+  }, [])Onboarding Form */}
+        {showOnboarding && (
+          <Card className="border-vault-green/30 bg-vault-bg">
+            <CardContent className="p-6 space-y-4">
+              <h3 className="text-lg font-bold text-white">Onboard New Employee</h3>
+              {onboardingError && (
+                <div className="bg-red-500/10 border border-red-500/20 rounded p-3 text-red-500 text-sm flex items-center gap-2">
+                  <XCircle size={16} />
+                  {onboardingError}
+                </div>
+              )}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-xs text-vault-slate">Auth Key</label>
+                  <input
+                    className="w-full bg-vault-slate/5 border border-vault-slate/20 rounded p-2 text-sm text-white"
+                    placeholder="DEMO-KEY-001"
+                    value={onboardingData.authKey}
+                    onChange={(e) => setOnboardingData({...onboardingData, authKey: e.target.value})}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs text-vault-slate">Wallet Address</label>
+                  <input
+                    className="w-full bg-vault-slate/5 border border-vault-slate/20 rounded p-2 text-sm text-white font-mono"
+                    placeholder="0x..."
+                    value={onboardingData.walletAddress}
+                    onChange={(e) => setOnboardingData({...onboardingData, walletAddress: e.target.value})}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs text-vault-slate">Nickname</label>
+                  <input
+                    className="w-full bg-vault-slate/5 border border-vault-slate/20 rounded p-2 text-sm text-white"
+                    placeholder="alice"
+                    value={onboardingData.nickname}
+                    onChange={(e) => setOnboardingData({...onboardingData, nickname: e.target.value})}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs text-vault-slate">Email</label>
+                  <input
+                    type="email"
+                    className="w-full bg-vault-slate/5 border border-vault-slate/20 rounded p-2 text-sm text-white"
+                    placeholder="alice@company.com"
+                    value={onboardingData.email}
+                    onChange={(e) => setOnboardingData({...onboardingData, email: e.target.value})}
+                  />
+                </div>
+              </div>
+              <Button 
+                className="w-full bg-vault-green text-black hover:bg-vault-green/90"
+                onClick={handleOnboard}
+                disabled={isOnboarding}
+              >
+                {isOnboarding ? 'Onboarding...' : 'Complete Onboarding'}
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Search Bar */}
+        <div className="relative">
+            <Search className="absolute left-3 top-3 text-vault-slate w-5 h-5" />
+            <input 
+                className="w-full bg-vault-slate/5 border border-vault-slate/10 rounded-md p-3 pl-10 font-mono text-sm text-white focus:border-vault-slate/30 outline-none transition-colors"
+                placeholder="Search by ID, Name, or Email..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+            />
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {isLoading ? (
+                <div className="col-span-full py-16 text-center">
+                    <p className="text-vault-slate font-mono text-sm">Loading employees...</p>
+                </div>
+            ) : filteredEmployees.length === 0 ? (
+                <div className="col-span-full py-16 text-center">
+                    <p className="text-vault-slate/50 font-mono text-sm">
+                      {searchTerm ? 'No employees match your search.' : 'No employees yet. Onboard your first employee to get started.'}
+                    </p>
+                </div>
+            ) : filteredEmployees.map((emp) => (
+                <motion.div key={emp.id} variants={itemVariants}>
+                    <Card className="hover:border-vault-green/30 transition-colors group cursor-pointer border-vault-slate/10 bg-vault-bg">
+                        <CardContent className="p-5 space-y-4">
+                            <div className="flex justify-between items-start">
+                                <div className="flex items-center gap-3">
+                                    <div className={`w-10 h-10 rounded-md flex items-center justify-center text-xs font-bold ${
+                                        emp.status === 'ACTIVE' ? 'bg-vault-green/10 text-vault-green border border-vault-green/20' : 'bg-vault-slate/10 text-vault-slate border border-vault-slate/20'
+                                    }`}>
+                                        {emp.employeeId.slice(-3)}
+                                    </div>
+                                    <div>
+                                        <div className="font-bold text-white text-sm">
+                                          {(emp.profileData as any)?.name || emp.employeeId}
+                                        </div>
+                                        <div className="text-[10px] text-vault-slate uppercase font-mono">
+                                          {(emp.profileData as any)?.position || 'Employee'}
+                                        
+        walletAddress: onboardingData.walletAddress,
+        signature: '0xmocksignature', // Would come from wallet signing
+        chain: onboardingData.chain,
+        profileData: {
+          nickname: onboardingData.nickname,
+          email: onboardingData.email,
+        },
+      }
+
+      const response = await apiClient.onboardEmployee(request)
+
+      if (response.success) {
+        setShowOnboarding(false)
+        setOnboardingData({ authKey: '', walletAddress: '', chain: 'ethereum', nickname: '', email: '' })
+        await loadEmployees()
+      } else {
+        setOnboardingError(response.error || 'Onboarding failed')
+      }
+    } catch (err) {
+      setOnboardingError(err instanceof Error ? err.message : 'Onboarding failed')
+    } finally {
+      setIsOnboarding(false)
+    }
+  }
+
+  const filteredEmployees = employees.filter(emp => 
+    emp.employeeId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (emp.profileData as any)?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (emp.profileData as any)?.email?.toLowerCase().includes(searchTerm.toLowerCase())
+  )
   return (
     <motion.div 
         className="space-y-6"

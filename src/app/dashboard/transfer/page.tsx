@@ -1,12 +1,13 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowRightLeft, ShieldCheck, Zap, Lock, Scan, CheckCircle2 } from 'lucide-react'
+import { ArrowRightLeft, ShieldCheck, Zap, Lock, Scan, CheckCircle2, AlertCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { WalletConnect } from '@/components/wallet/WalletConnect'
+import { apiClient, type CreateTransactionRequest } from '@/lib/api-client'
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -23,29 +24,128 @@ const itemVariants = {
 
 export default function TransferPage() {
   const [isProcessing, setIsProcessing] = useState(false)
-  const [complete, setComplete] = useState(false)
+  const [error, setError] = useState<string>('')
+  const [txHash, setTxHash] = useState<string>('')
+  
+  // Form state
+  const [recipientAddress, setRecipientAddress] = useState<string>('')
+  const [amount, setAmount] = useState<string>('')
+  const [currency] = useState<string>('USDC')
+  const [fromEmployeeId] = useState<string>('emp_demo_001') // This would come from auth context
+  const [recentTransactions, setRecentTransactions] = useState<any[]>([])
+  const [isLoadingTxs, setIsLoadingTxs] = useState(false)
 
-  const handleTransfer = () => {
+  // Load recent transactions
+  useEffect(() => {
+    loadRecentTransactions()
+  }, [])
+
+  const loadRecentTransactions = async () => {
+    setIsLoadingTxs(true)
+    try {
+      const response = await apiClient.getEmployeeTransactions(fromEmployeeId, {
+        limit: 3,
+        status: 'CONFIRMED'
+      })
+      if (response.success && response.data) {
+        setRecentTransactions(Array.isArray(response.data) ? response.data : [])
+      }
+    } catch (err) {
+      console.error('Failed to load transactions:', err)
+    } finally {
+      setIsLoadingTxs(false)
+    }
+  }
+
+  const handleTransfer = async () => {
+    // Validate inputs
+    if (!recipientAddress || !amount) {
+      setError('Please enter recipient address and amount')
+      return
+    }
+
+    const amountNum = parseFloat(amount)
+    if (isNaN(amountNum) || amountNum <= 0) {
+      setError('Invalid amount')
+      return
+    }
+
+    setError('')
     setIsProcessing(true)
-    // Simulate ZK Proof generation time
-    setTimeout(() => {
-        setIsProcessing(false)
+
+    try {
+      // Create transaction via API
+      const transactionData: CreateTransactionRequest = {
+        fromEmployeeId,
+        toAddress: recipientAddress,
+        amount: amount,
+        currency,
+        chain: 'sui', // or 'ethereum' based on selection
+        privacyLevel: 'FULLY_PRIVATE', // Maximum privacy
+      }
+
+      const response = await apiClient.createTransaction(transactionData)
+
+      if (response.success && response.data) {
+        // Simulate ZK proof generation time
+        await new Promise(resolve => setTimeout(resolve, 2000))
+        
+        setTxHash(response.data.blockchainTxHash || response.data.transactionId)
         setComplete(true)
-    }, 3000)
-  }
+        
+        // Reload recent transactions
+        await loadRecentTransactions()
+      } else {
+        setError(response.error || 'Transaction failed')
+      }
+    } catch (err) {2 max-w-md">
+                              Transaction {txHash ? `hash ${txHash.slice(0, 10)}...` : 'verified'} on-chain.
+                            </p>
+                            <p className="text-vault-slate font-mono text-center mb-6 max-w-md text-sm">
+                              Zero-knowledge proof has been broadcast.
+                            </p>
+                            <Button onClick={reset} variant="default">New Transfer</Button>
+                        </div>
+                    ) : null}
 
-  const reset = () => {
-      setComplete(false)
-      setIsProcessing(false)
-  }
+                    {error && (
+                        <div className="bg-red-500/10 border border-red-500/20 rounded-md p-4 m-4 flex items-start gap-3">
+                            <AlertCircle className="text-red-500 flex-shrink-0 mt-0.5" size={18} ENS/Address</span>
+                            </label>
+                            <div className="relative">
+                                <Scan className="absolute left-3 top-3 text-vault-slate w-5 h-5" />
+                                <input 
+                                    className="w-full bg-vault-slate/5 border border-vault-slate/20 rounded-md p-3 pl-10 font-mono text-sm text-white focus:border-vault-green focus:ring-1 focus:ring-vault-green outline-none transition-all"
+                                    placeholder="0x... or name.eth"
+                                    value={recipientAddress}
+                                    onChange={(e) => setRecipientAddress(e.target.value)}
+                                />
+                                {recipientAddress && recipientAddress.startsWith('0x') && recipientAddress.length > 10 && (
+                                  <div className="absolute right-3 top-2.5">
+                                      <Badge variant="outline" className="text-[10px] bg-green-500/10 text-green-500 border-green-500/20">VALID</Badge>
+                                  </div>
+                                )}
+                            </div>
+                        </div>
 
-  return (
-    <motion.div 
-        className="space-y-6 max-w-5xl mx-auto"
-        variants={containerVariants}
-        initial="hidden"
-        animate="visible"
-    >
+                        <div className="space-y-2">
+                            <label className="text-xs font-mono text-vault-slate uppercase flex justify-between">
+                                <span>Amount</span>
+                                <span className="text-vault-slate">Currency: {currency}</span>
+                            </label>
+                            <div className="relative">
+                                <input 
+                                    type="number"
+                                    step="0.01"
+                                    min="0"
+                                    className="w-full bg-vault-slate/5 border border-vault-slate/20 rounded-md p-4 pr-24 font-mono text-2xl text-white focus:border-vault-green focus:ring-1 focus:ring-vault-green outline-none transition-all font-bold placeholder:text-vault-slate/20"
+                                    placeholder="0.00"
+                                    value={amount}
+                                    onChange={(e) => setAmount(e.target.value)}
+                                />
+                                <div className="absolute right-4 top-4 flex items-center gap-2">
+                                    <div className="h-6 w-px bg-vault-slate/20"></div>
+                                    <span className="font-bold text-vault-slate">{currency}
         <div className="flex justify-between items-end border-b border-vault-slate/20 pb-4">
             <div>
                 <h1 className="text-2xl font-bold text-white tracking-tight flex items-center gap-2">
@@ -136,8 +236,12 @@ export default function TransferPage() {
                                 />
                                 <div className="absolute right-4 top-4 flex items-center gap-2">
                                     <div className="h-6 w-px bg-vault-slate/20"></div>
-                                    <span className="font-bold text-vault-slate">DVPN</span>
-                                </div>
+                                    <
+                                onClick={handleTransfer} 
+                                disabled={isProcessing || !recipientAddress || !amount}
+                                className="w-full bg-vault-green text-black hover:bg-vault-green/90 h-12 text-lg font-bold cyber-btn disabled:opacity-50 disabled:cursor-not-allowed"
+                             >
+                                {isProcessing ? 'PROCESSING...' : 'SIGN TRANSFER'}
                             </div>
                         </div>
 
@@ -151,26 +255,43 @@ export default function TransferPage() {
                              </div>
                              <div className="p-3 bg-vault-slate/5 rounded-md border border-vault-slate/10">
                                 <div className="text-[10px] text-vault-slate uppercase font-mono mb-1">Privacy Level</div>
-                                <div className="text-sm font-bold text-white flex items-center gap-1">
-                                    <ShieldCheck size={12} className="text-vault-green" />
-                                    MAXIMUM
+                         isLoadingTxs ? (
+                          <div className="p-8 text-center text-vault-slate text-sm">Loading...</div>
+                        ) : recentTransactions.length > 0 ? (
+                          recentTransactions.map((tx, i) => (
+                            <div key={tx.id || i} className="flex items-center justify-between p-4 border-b border-vault-slate/10 last:border-0 hover:bg-vault-slate/5 transition-colors group">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-8 h-8 rounded-full bg-vault-slate/10 flex items-center justify-center text-vault-slate group-hover:bg-vault-green/20 group-hover:text-vault-green transition-colors">
+                                        <ArrowRightLeft size={14} />
+                                    </div>
+                                    <div>
+                                        <div className="text-xs font-mono text-white">
+                                          {tx.toAddress ? `To ${tx.toAddress.slice(0, 6)}...${tx.toAddress.slice(-4)}` : 'Transfer'}
+                                        </div>
+                                        <div className="text-[10px] text-vault-slate">
+                                          {new Date(tx.createdAt || tx.timestamp).toLocaleTimeString()}
+                                        </div>
+                                    </div>
                                 </div>
-                             </div>
-                        </div>
-
-                        <div className="pt-4">
-                             <Button onClick={handleTransfer} className="w-full bg-vault-green text-black hover:bg-vault-green/90 h-12 text-lg font-bold cyber-btn">
-                                SIGN TRANSFER
-                            </Button>
-                        </div>
+                                <div className="text-right">
+                                    <div className="text-xs font-bold text-white">- {tx.amount} {tx.currency}</div>
+                                    <div className="text-[10px] text-green-500">{tx.status}</div>
+                                </div>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="p-8 text-center text-vault-slate text-sm">No recent transactions</div>
+                        )}
                     </CardContent>
-                </Card>
-            </motion.div>
-
-            {/* Right Column: Wallet & Recent */}
-            <motion.div variants={itemVariants} className="space-y-6">
-                 {/* Wallet Connect Component */}
-                 <WalletConnect />
+                    <CardFooter className="pt-2">
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="w-full text-xs text-vault-slate hover:text-white"
+                          onClick={loadRecentTransactions}
+                        >
+                          Refresh
+                        
 
                  {/* Recent Transfers */}
                  <Card>
