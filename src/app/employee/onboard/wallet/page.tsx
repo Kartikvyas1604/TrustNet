@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { Button } from '@/components/ui/button'
@@ -14,13 +14,18 @@ export default function EmployeeOnboardWalletPage() {
   const [loading, setLoading] = useState(false)
   const [step, setStep] = useState<'connect' | 'profile'>('connect')
   const [walletAddress, setWalletAddress] = useState('')
+  const [organizationName, setOrganizationName] = useState('Organization')
   const [profileData, setProfileData] = useState({
     nickname: '',
     email: '',
     jobTitle: '',
   })
 
-  const organizationName = sessionStorage.getItem('organizationName') || 'Organization'
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setOrganizationName(sessionStorage.getItem('organizationName') || 'Organization')
+    }
+  }, [])
 
   const handleConnectWallet = async () => {
     setLoading(true)
@@ -41,6 +46,10 @@ export default function EmployeeOnboardWalletPage() {
         method: 'eth_requestAccounts' 
       })
       
+      if (!window.ethereum) {
+        throw new Error('MetaMask disconnected')
+      }
+      
       const address = accounts[0]
       setWalletAddress(address)
 
@@ -59,6 +68,9 @@ export default function EmployeeOnboardWalletPage() {
 
       if (data.success) {
         // Sign message
+        if (!window.ethereum) {
+          throw new Error('MetaMask not available')
+        }
         const message = data.data.challenge.message
         const signature = await window.ethereum.request({
           method: 'personal_sign',

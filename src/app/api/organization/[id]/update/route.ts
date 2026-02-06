@@ -4,12 +4,13 @@ const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const body = await request.json()
     
-    const response = await fetch(`${BACKEND_URL}/api/organization/${params.id}/update`, {
+    const response = await fetch(`${BACKEND_URL}/api/organization/${id}/update`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',

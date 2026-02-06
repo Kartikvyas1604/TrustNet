@@ -292,7 +292,7 @@ export default function OrganizationPayrollPage() {
                             step="0.01"
                             min="0"
                             value={employee.amount || ''}
-                            onChange={(e) =>
+                            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                               updateAmount(index, parseFloat(e.target.value) || 0)
                             }
                             className="bg-vault-dark border-vault-slate/20 text-white text-center pl-6 h-8"

@@ -196,6 +196,24 @@ export class WebSocketService {
   public getIO(): SocketIOServer {
     return this.io
   }
+
+  // General emit method for compatibility
+  // Routes to appropriate target based on event pattern
+  public emit(event: string, targetId: string, data: any) {
+    const employeeEvents = [
+      'balance_updated',
+      'payment_received',
+      'payroll_received',
+      'transaction_approved',
+      'transaction_rejected',
+    ]
+
+    if (employeeEvents.includes(event)) {
+      this.emitToUser(targetId, event, data)
+    } else {
+      this.emitToOrganization(targetId, event, data)
+    }
+  }
 }
 
 let websocketService: WebSocketService | null = null

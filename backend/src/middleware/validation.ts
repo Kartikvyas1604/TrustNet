@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express'
-import { z } from 'zod'
+import { z, ZodError } from 'zod'
+import { UploadedFile } from 'express-fileupload'
 
 // Organization registration validation schema
 export const organizationRegistrationSchema = z.object({
@@ -46,18 +47,18 @@ export function validateRequest(schema: z.ZodSchema) {
     try {
       await schema.parseAsync(req.body)
       next()
-    } catch (error: any) {
-      if (error instanceof z.ZodError) {
+    } catch (error) {
+      if (error instanceof ZodError) {
         res.status(400).json({
           success: false,
           error: 'Validation failed',
-          details: error.errors.map(err => ({
+          details: error.issues.map(err => ({
             field: err.path.join('.'),
             message: err.message,
           })),
         })
       } else {
-        res.status(500).json({ success: false, error: error.message })
+        res.status(500).json({ success: false, error: (error as Error).message })
       }
     }
   }
@@ -93,11 +94,13 @@ export function sanitizeInput(req: Request, res: Response, next: NextFunction) {
 // File upload validation
 export function validateFileUpload(allowedTypes: string[], maxSizeMB: number) {
   return (req: Request, res: Response, next: NextFunction) => {
-    if (!req.files || Object.keys(req.files).length === 0) {
+    const typedReq = req as Request & { files?: { [key: string]: UploadedFile | UploadedFile[] } }
+    
+    if (!typedReq.files || Object.keys(typedReq.files).length === 0) {
       return res.status(400).json({ success: false, error: 'No files uploaded' })
     }
 
-    const files = Array.isArray(req.files) ? req.files : Object.values(req.files)
+    const files = Array.isArray(typedReq.files) ? typedReq.files : Object.values(typedReq.files)
     
     for (const file of files) {
       const fileArray = Array.isArray(file) ? file : [file]
@@ -144,7 +147,7 @@ export async function validateSufficientBalance(req: Request, res: Response, nex
     }
 
     next()
-  } catch (error: any) {
-    res.status(500).json({ success: false, error: error.message })
+  } catch (error) {
+    res.status(500).json({ success: false, error: (error as Error).message })
   }
 }

@@ -178,7 +178,7 @@ export default function EmployeeProfilePage() {
                   <Label>Nickname</Label>
                   <Input
                     value={employeeData.nickname || ''}
-                    onChange={(e) =>
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                       setEmployeeData({ ...employeeData, nickname: e.target.value })
                     }
                     className="bg-vault-dark border-vault-slate/20 text-white"
@@ -204,7 +204,7 @@ export default function EmployeeProfilePage() {
                   <Label>Job Title</Label>
                   <Input
                     value={employeeData.jobTitle || ''}
-                    onChange={(e) =>
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                       setEmployeeData({ ...employeeData, jobTitle: e.target.value })
                     }
                     className="bg-vault-dark border-vault-slate/20 text-white"

@@ -4,11 +4,12 @@ const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string, keyId: string } }
+  { params }: { params: Promise<{ id: string, keyId: string }> }
 ) {
   try {
+    const { id, keyId } = await params
     const response = await fetch(
-      `${BACKEND_URL}/api/organization/${params.id}/auth-keys/${params.keyId}`,
+      `${BACKEND_URL}/api/organization/${id}/auth-keys/${keyId}`,
       {
         method: 'DELETE',
         headers: {

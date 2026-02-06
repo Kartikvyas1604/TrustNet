@@ -117,7 +117,7 @@ export default function LicenseSelectionPage() {
             </div>
             <Slider
               value={[employeeCount]}
-              onValueChange={(value) => setEmployeeCount(value[0])}
+              onValueChange={(value: number[]) => setEmployeeCount(value[0])}
               min={1}
               max={1000}
               step={1}

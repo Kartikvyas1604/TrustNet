@@ -44,8 +44,14 @@ class OrganizationService {
       data: {
         organizationId,
         name: input.name,
+        legalBusinessName: input.name, // Use name as legal business name for now
         registrationNumber: input.registrationNumber,
         country: input.country,
+        businessAddress: { street: '', city: '', state: '', zip: '' }, // Placeholder
+        adminName: input.contactPerson,
+        adminEmail: input.contactEmail,
+        adminPhone: '', // Placeholder - should be collected during registration
+        adminJobTitle: 'Administrator', // Default value
         kycStatus: 'PENDING',
         subscriptionTier: input.subscriptionTier.toUpperCase() as any,
         employeeLimit: employeeLimits[input.subscriptionTier],

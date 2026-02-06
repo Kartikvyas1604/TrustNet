@@ -34,6 +34,9 @@ export default function OrganizationWalletPage() {
     setLoading(true)
     try {
       // Request account access
+      if (!window.ethereum) {
+        throw new Error('MetaMask not available')
+      }
       const accounts = await window.ethereum.request({
         method: 'eth_requestAccounts',
       })
@@ -61,6 +64,11 @@ export default function OrganizationWalletPage() {
       })
 
       const { challenge } = await challengeResponse.json()
+
+      // Check if ethereum is available
+      if (!window.ethereum) {
+        throw new Error('MetaMask is not installed')
+      }
 
       // Request signature from MetaMask
       const sig = await window.ethereum.request({

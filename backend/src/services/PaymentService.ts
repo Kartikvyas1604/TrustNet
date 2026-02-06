@@ -4,7 +4,7 @@ import logger from '../utils/logger';
 
 const prisma = new PrismaClient();
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_', {
-  apiVersion: '2024-12-18.acacia',
+  apiVersion: '2023-10-16',
 });
 
 class PaymentService {

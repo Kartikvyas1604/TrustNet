@@ -3,7 +3,7 @@ import { body, validationResult } from 'express-validator';
 import { PrismaClient } from '@prisma/client';
 import crypto from 'crypto';
 import { suiBlockchainService } from '../services/SuiBlockchainService';
-import webSocketService from '../services/WebSocketService';
+import { getWebSocketService } from '../services/websocket.service';
 import logger from '../utils/logger';
 
 const router = Router();
@@ -141,7 +141,7 @@ router.post('/:organizationId/deposit-detected', async (req: Request, res: Respo
     });
 
     // Emit WebSocket event
-    webSocketService.emit('treasury_deposit', organizationId, {
+    getWebSocketService().emit('treasury_deposit', organizationId, {
       chain,
       amount,
       newBalance: newBalance[chain],
@@ -313,7 +313,7 @@ router.post(
 
           if (employee) {
             // Emit WebSocket event to employee
-            webSocketService.emit('payroll_received', employee.employeeId, {
+            getWebSocketService().emit('payroll_received', employee.employeeId, {
               amount: item.amount,
               currency,
               transactionId,
@@ -344,7 +344,7 @@ router.post(
         });
 
         // Emit WebSocket event to organization dashboard
-        webSocketService.emit('payroll_completed', organizationId, {
+        getWebSocketService().emit('payroll_completed', organizationId, {
           payrollId,
           employeeCount: payrollData.length,
           totalAmount,
@@ -432,7 +432,7 @@ router.get('/history/:organizationId', async (req: Request, res: Response) => {
     res.json({
       success: true,
       data: {
-        payrollRuns: payrollRuns.map(pr => ({
+        payrollRuns: payrollRuns.map((pr) => ({
           payrollId: pr.payrollId,
           employeeCount: pr.employeeCount,
           totalAmount: pr.totalAmount,

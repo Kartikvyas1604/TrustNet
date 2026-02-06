@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { body, validationResult } from 'express-validator';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, AuthKeyStatus } from '@prisma/client';
 import crypto from 'crypto';
 import bcrypt from 'bcrypt';
 import { suiBlockchainService } from '../services/SuiBlockchainService';
@@ -462,7 +462,7 @@ router.post('/admin/organizations/:id/approve', async (req: Request, res: Respon
       authKeyRecords.push({
         keyHash,
         organizationId: organization.organizationId,
-        status: 'UNUSED',
+        status: AuthKeyStatus.UNUSED,
         generatedAt: new Date(),
       });
     }

@@ -1,10 +1,10 @@
 import { Router, Request, Response } from 'express';
 import { body, validationResult } from 'express-validator';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, PrivacyLevel } from '@prisma/client';
 import crypto from 'crypto';
 import yellowNetworkService from '../services/YellowNetworkService';
 import { suiBlockchainService } from '../services/SuiBlockchainService';
-import webSocketService from '../services/WebSocketService';
+import { getWebSocketService } from '../services/websocket.service';
 import logger from '../utils/logger';
 
 const router = Router();
@@ -122,7 +122,9 @@ async function handleInternalTransaction(
           currency,
           chain,
           transactionType: 'YELLOW_OFFCHAIN',
-          privacyLevel: privacyLevel || 'ORGANIZATION_ONLY',
+          privacyLevel: (privacyLevel && Object.values(PrivacyLevel).includes(privacyLevel as PrivacyLevel)) 
+            ? (privacyLevel as PrivacyLevel) 
+            : PrivacyLevel.ORGANIZATION_ONLY,
           status: 'CONFIRMED',
           timestamp: new Date(),
           gasUsed: '0',
@@ -131,19 +133,19 @@ async function handleInternalTransaction(
       });
 
       // Emit WebSocket events for real-time updates
-      webSocketService.emit('balance_updated', fromEmployee.employeeId, {
+      getWebSocketService().emit('balance_updated', fromEmployee.employeeId, {
         newBalance: '0', // TODO: Calculate actual balance
         transactionId,
       });
 
-      webSocketService.emit('payment_received', toEmployee.employeeId, {
+      getWebSocketService().emit('payment_received', toEmployee.employeeId, {
         from: fromEmployee.ensName,
         amount,
         currency,
         transactionId,
       });
 
-      webSocketService.emit('transaction_completed', fromEmployee.organizationId, {
+      getWebSocketService().emit('transaction_completed', fromEmployee.organizationId, {
         transactionId,
         type: 'internal',
         amount,

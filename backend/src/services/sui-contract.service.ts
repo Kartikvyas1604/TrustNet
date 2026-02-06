@@ -1,4 +1,6 @@
-import { JsonRpcProvider, TransactionBlock, Ed25519Keypair } from '@mysten/sui.js'
+import { SuiClient } from '@mysten/sui.js/client'
+import { TransactionBlock } from '@mysten/sui.js/transactions'
+import { Ed25519Keypair } from '@mysten/sui.js/keypairs/ed25519'
 import { PrismaClient } from '@prisma/client'
 
 const prisma = new PrismaClient()
@@ -14,11 +16,11 @@ const EMPLOYEE_WALLET_ADDRESS = process.env.EMPLOYEE_WALLET_ADDRESS || '0x...'
 const PAYROLL_DISTRIBUTOR_ADDRESS = process.env.PAYROLL_DISTRIBUTOR_ADDRESS || '0x...'
 
 export class SuiContractService {
-  private provider: JsonRpcProvider
+  private provider: SuiClient
   private adminKeypair: Ed25519Keypair | null = null
 
   constructor() {
-    this.provider = new JsonRpcProvider(SUI_RPC_URL)
+    this.provider = new SuiClient({ url: SUI_RPC_URL })
     this.initializeAdminKeypair()
   }
 

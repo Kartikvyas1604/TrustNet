@@ -160,7 +160,7 @@ export default function OrganizationEmployeesPage() {
               <Input
                 placeholder="Search employees by name, email, or job title..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
                 className="bg-vault-dark border-vault-slate/20 text-white pl-10"
               />
             </div>

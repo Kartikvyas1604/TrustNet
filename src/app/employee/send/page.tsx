@@ -199,7 +199,7 @@ export default function EmployeeSendPage() {
                   id="recipient"
                   placeholder="ENS name (alice.trustnet.eth) or wallet address (0x...)"
                   value={recipient}
-                  onChange={(e) => setRecipient(e.target.value)}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setRecipient(e.target.value)}
                   className="bg-vault-dark border-vault-slate/20 text-white"
                 />
                 {checking && (
@@ -242,7 +242,7 @@ export default function EmployeeSendPage() {
                     min="0"
                     placeholder="0.00"
                     value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAmount(e.target.value)}
                     className="bg-vault-dark border-vault-slate/20 text-white pl-9"
                   />
                 </div>
@@ -271,7 +271,7 @@ export default function EmployeeSendPage() {
                 id="memo"
                 placeholder="Payment for Q1 2024 work"
                 value={memo}
-                onChange={(e) => setMemo(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setMemo(e.target.value)}
                 className="bg-vault-dark border-vault-slate/20 text-white"
               />
             </div>

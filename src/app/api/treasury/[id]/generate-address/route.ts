@@ -4,13 +4,14 @@ const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const body = await request.json()
     
     const response = await fetch(
-      `${BACKEND_URL}/api/treasury/${params.id}/generate-address`,
+      `${BACKEND_URL}/api/treasury/${id}/generate-address`,
       {
         method: 'POST',
         headers: {
