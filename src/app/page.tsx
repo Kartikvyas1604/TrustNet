@@ -26,28 +26,32 @@ export default function LandingPage() {
           >
             <Badge variant="outline" className="mb-6 px-4 py-1.5 border-vault-green/30 text-vault-green bg-vault-green/5 text-xs">
               <span className="w-2 h-2 rounded-full bg-vault-green animate-pulse mr-2" />
-              ENTERPRISE-GRADE ZK-PRIVACY
+              ENTERPRISE-GRADE PRIVACY PAYROLL
             </Badge>
             <h1 className="text-5xl md:text-7xl font-bold tracking-tight mb-8 font-sans">
-              Protect Corporate Assets <br />
-              <span className="text-vault-green">On The Public Chain</span>
+              Private, Instant Payroll <br />
+              <span className="text-vault-green">For Modern Companies</span>
             </h1>
             <p className="text-xl text-vault-slate max-w-2xl mx-auto mb-10 leading-relaxed">
-              The first decentralized VPN network designed for institutional compliance. 
-              Zero-knowledge interactions, audit-ready logs, and complete employee anonymity.
+              Zero-knowledge payroll distribution with free internal transactions. 
+              Parent-child wallet architecture for compliance and privacy.
             </p>
             
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <Link href="/auth">
+              <Link href="/organization/register">
                 <Button size="lg" variant="cyber" className="text-lg h-14 px-8">
-                  Start Verification <ArrowRight className="ml-2 h-5 w-5" />
+                  Sign Up as Organization <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>
               </Link>
-              <Link href="/docs">
+              <Link href="/employee/login">
                 <Button size="lg" variant="outline" className="text-lg h-14 px-8 border-vault-slate/30 hover:bg-vault-slate/10">
-                  View Documentation
+                  I&apos;m an Employee
                 </Button>
               </Link>
+            </div>
+            
+            <div className="mt-6 text-sm text-vault-slate">
+              Already have an account? <Link href="/auth" className="text-vault-green hover:underline">Login here</Link>
             </div>
           </motion.div>
         </div>
