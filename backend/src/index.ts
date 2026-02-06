@@ -22,6 +22,12 @@ import transactionRoutes from './routes/transactions';
 import ensRoutes from './routes/ens';
 import authRoutes from './routes/auth';
 
+// Import new workflow routes
+import organizationRegistrationRoutes from './routes/organization-registration';
+import employeeOnboardingRoutes from './routes/employee-onboarding';
+import transactionFlowRoutes from './routes/transaction-flow';
+import treasuryPayrollRoutes from './routes/treasury-payroll';
+
 // Load environment variables
 dotenv.config();
 
@@ -64,6 +70,13 @@ app.use('/api/ens', ensRoutes);
 app.use('/api/organizations', organizationRoutes);
 app.use('/api/employees', employeeRoutes);
 app.use('/api/transactions', transactionRoutes);
+
+// New workflow routes
+app.use('/api/organization', organizationRegistrationRoutes);
+app.use('/api/employee', employeeOnboardingRoutes);
+app.use('/api/transactions', transactionFlowRoutes);
+app.use('/api/treasury', treasuryPayrollRoutes);
+app.use('/api/payroll', treasuryPayrollRoutes);
 
 // 404 handler
 app.use((req: Request, res: Response) => {
