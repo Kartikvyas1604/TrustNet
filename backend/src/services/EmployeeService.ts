@@ -1,9 +1,9 @@
 import bcrypt from 'bcrypt';
 import crypto from 'crypto';
-import { IEmployee, OnboardEmployeeInput } from '../types';
+import { IEmployee, OnboardEmployeeRequest } from '../types';
 import AuthKey from '../models/AuthKey';
-import Employee from '../models/Employee';
-import Organization from '../models/Organization';
+import { EmployeeModel } from '../models/Employee';
+import { OrganizationModel } from '../models/Organization';
 import MerkleTreeService from './MerkleTreeService';
 import logger from '../utils/logger';
 
@@ -11,7 +11,7 @@ class EmployeeService {
   /**
    * Onboard a new employee using an auth key
    */
-  async onboardEmployee(input: OnboardEmployeeInput): Promise<IEmployee> {
+  async onboardEmployee(input: OnboardEmployeeRequest): Promise<IEmployee> {
     // Find all unused auth keys and check against the provided key
     const authKeys = await AuthKey.findMany({ 
       where: { status: 'UNUSED' } 
@@ -31,10 +31,8 @@ class EmployeeService {
     }
 
     // Get organization details
-    const organization = await Organization.findUnique({
-      where: {
-        organizationId: matchedKey.organizationId,
-      }
+    const organization = await OrganizationModel.findOne({
+      organizationId: matchedKey.organizationId,
     });
 
     if (!organization) {
@@ -48,14 +46,7 @@ class EmployeeService {
     // Check if wallet already exists
     const existingEmployees = await Employee.findMany({
       where: {
-        walletAddresses: {
-          path: [input.chain],
-          equals: input.walletAddress
-        }
-      }
-    });
-
-    if (existingEmployees && existingEmployees.length > 0) {
+        walletAddresses: {Model.findByWallet(input.walletAddressf (existingEmployees && existingEmployees.length > 0) {
       throw new Error('Wallet address already registered');
     }
 
@@ -84,24 +75,20 @@ class EmployeeService {
         walletAddresses,
         authKeyHash,
         ensName,
-        profileData: {
-          nickname: input.nickname,
-          email: input.email,
-        },
-        status: 'ACTIVE',
-        privacyPreferences: {
-          defaultPrivacyLevel: 'ORGANIZATION_ONLY',
-          preferredChain: input.chain,
-        }
-      }
-    });
-
-    // Add employee to organization's Merkle tree
-    await MerkleTreeService.addLeaf(
-      matchedKey.organizationId,
-      employee.employeeId
-    );
-
+        profileData: {Model.create({
+      employeeId,
+      organizationId: matchedKey.organizationId,
+      walletAddresses,
+      authKeyHash,
+      ensName,
+      profileData: {
+        nickname: input.nickname,
+        email: input.email,
+      },
+      status: 'ACTIVE',
+      privacyPreferences: {
+        defaultPrivacyLevel: 'ORGANIZATION_ONLY',
+        preferredChain: input.chain,
     // Update auth key status
     await AuthKey.update({
       where: { id: matchedKey.id },
@@ -116,13 +103,10 @@ class EmployeeService {
     
     return employee as any;
   }
-
-  /**
-   * Get employee by ID
-   */
-  async getEmployee(employeeId: string): Promise<IEmployee | null> {
-    return await Employee.findUnique({ 
-      where: { employeeId } 
+matchedKey.id, {
+      status: 'ACTIVE',
+      assignedEmployeeId: employeeId,
+      usedAt: new Date(),here: { employeeId } 
     }) as any;
   }
 
@@ -137,44 +121,22 @@ class EmployeeService {
           path: ['ethereum'],
           equals: walletAddress
         }
-      },
-      take: 1
-    });
+      },Model.findByEmployeeId(employeeId);
+  }
 
-    if (employees.length > 0) return employees[0] as any;
-
-    // Try sui
-    employees = await Employee.findMany({
-      where: {
-        walletAddresses: {
-          path: ['sui'],
-          equals: walletAddress
-        }
-      },
-      take: 1
-    });
-
-    if (employees.length > 0) return employees[0] as any;
-
-    // Try base
-    employees = await Employee.findMany({
-      where: {
-        walletAddresses: {
-          path: ['base'],
-          equals: walletAddress
-        }
-      },
-      take: 1
-    });
-
-    return employees.length > 0 ? employees[0] as any : null;
+  /**
+   * Get employee by wallet address
+   */
+  async getEmployeeByWallet(walletAddress: string): Promise<IEmployee | null> {
+    const employees = await EmployeeModel.findByWallet(walletAddress);
+    return employees.length > 0 ? employees[0] : null;
   }
 
   /**
    * Get all employees for an organization
    */
   async getOrganizationEmployees(organizationId: string): Promise<IEmployee[]> {
-    return await Employee.findMany({
+    return await EmployeeModel.findMany({
       where: {
         organizationId,
         status: 'ACTIVE',
@@ -182,23 +144,7 @@ class EmployeeService {
       orderBy: {
         onboardingDate: 'desc'
       }
-    }) as any;
-  }
-
-  /**
-   * Add additional wallet address to employee
-   */
-  async addWalletAddress(
-    employeeId: string,
-    chain: 'ethereum' | 'sui' | 'base',
-    walletAddress: string
-  ): Promise<IEmployee | null> {
-    // Check if wallet already exists
-    const existingEmployees = await Employee.findMany({
-      where: {
-        walletAddresses: {
-          path: [chain],
-          equals: walletAddress
+    })als: walletAddress
         }
       }
     });
@@ -248,42 +194,29 @@ class EmployeeService {
       where: { employeeId }
     });
 
+    if (!employee) {Model.findByWallet(walletAddress);
+    const existingEmployee = existingEmployees.length > 0 ? existingEmployees[0] : null;
+
+    if (existingEmployee && existingEmployee.employeeId !== employeeId) {
+      throw new Error('Wallet address already registered to another employee');
+    }
+
+    const employee = await EmployeeModel.findByEmployeeId(employeeId);
+
     if (!employee) {
       throw new Error('Employee not found');
     }
 
-    const currentProfile = { ...employee.profileData as any };
-    const updatedProfile = { ...currentProfile, ...profileData };
+    // Update wallet addresses
+    const walletAddresses = { ...employee.walletAddresses as any };
+    walletAddresses[chain] = walletAddress;
 
-    const updatedEmployee = await Employee.update({
-      where: { employeeId },
-      data: {
-        profileData: updatedProfile
-      }
+    const updatedEmployee = await EmployeeModel.update(employeeId, {
+      walletAddresses
     });
 
-    logger.info(`Updated profile for employee: ${employeeId}`);
-    return updatedEmployee as any;
-  }
-
-  /**
-   * Update employee status
-   */
-  async updateStatus(
-    employeeId: string,
-    status: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED' | 'REVOKED'
-  ): Promise<IEmployee | null> {
-    const updatedEmployee = await Employee.update({
-      where: { employeeId },
-      data: { status: status as any }
-    });
-
-    logger.info(`Updated status for employee ${employeeId} to ${status}`);
-    return updatedEmployee as any;
-  }
-
-  /**
-   * Revoke employee access
+    logger.info(`Added ${chain} wallet for employee: ${employeeId}`);
+    return updatedEmployee
    */
   async revokeAccess(employeeId: string): Promise<void> {
     await this.updateStatus(employeeId, 'REVOKED');
