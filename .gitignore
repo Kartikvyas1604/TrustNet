@@ -39,3 +39,17 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# backup and temporary files
+*.bak
+*.tmp
+*.old
+*~
+
+# lock files for alternative package managers
+bun.lock
+yarn.lock
+
+# logs
+logs/
+*.log
