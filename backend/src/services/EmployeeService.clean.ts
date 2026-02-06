@@ -53,9 +53,10 @@ class EmployeeService {
     // Generate employee ID
     const employeeId = `emp_${crypto.randomBytes(8).toString('hex')}`;
 
-    // Generate ENS name
-    const ensName = input.nickname
-      ? `${input.nickname.toLowerCase()}.${organization.organizationId}.eth`
+    // Generate ENS name based on profileData
+    const nickname = input.profileData?.nickname;
+    const ensName = nickname
+      ? `${nickname.toLowerCase()}.${organization.organizationId}.eth`
       : `${employeeId}.${organization.organizationId}.eth`;
 
     // Hash the auth key
@@ -68,14 +69,13 @@ class EmployeeService {
     // Create employee record
     const employee = await EmployeeModel.create({
       employeeId,
-      organizationId: matchedKey.organizationId,
+      organization: {
+        connect: { organizationId: matchedKey.organizationId }
+      },
       walletAddresses,
       authKeyHash,
       ensName,
-      profileData: {
-        nickname: input.nickname,
-        email: input.email,
-      },
+      profileData: input.profileData || {},
       status: 'ACTIVE',
       privacyPreferences: {
         defaultPrivacyLevel: 'ORGANIZATION_ONLY',
@@ -157,9 +157,10 @@ class EmployeeService {
     const walletAddresses = { ...employee.walletAddresses as any };
     walletAddresses[chain] = walletAddress;
 
-    const updatedEmployee = await EmployeeModel.update(employeeId, {
-      walletAddresses
-    });
+    const updatedEmployee = await EmployeeModel.update(
+      { employeeId },
+      { walletAddresses }
+    );
 
     logger.info(`Added ${chain} wallet for employee: ${employeeId}`);
     return updatedEmployee;
@@ -186,9 +187,10 @@ class EmployeeService {
     const currentProfile = { ...employee.profileData as any };
     const updatedProfile = { ...currentProfile, ...profileData };
 
-    const updatedEmployee = await EmployeeModel.update(employeeId, {
-      profileData: updatedProfile
-    });
+    const updatedEmployee = await EmployeeModel.update(
+      { employeeId },
+      { profileData: updatedProfile }
+    );
 
     logger.info(`Updated profile for employee: ${employeeId}`);
     return updatedEmployee;
@@ -201,9 +203,10 @@ class EmployeeService {
     employeeId: string,
     status: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED' | 'REVOKED'
   ): Promise<IEmployee | null> {
-    const updatedEmployee = await EmployeeModel.update(employeeId, {
-      status: status as any
-    });
+    const updatedEmployee = await EmployeeModel.update(
+      { employeeId },
+      { status: status as any }
+    );
 
     logger.info(`Updated status for employee ${employeeId} to ${status}`);
     return updatedEmployee;

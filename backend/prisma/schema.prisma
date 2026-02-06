@@ -73,6 +73,7 @@ model Employee {
   status             EmployeeStatus @default(ACTIVE)
   privacyPreferences Json?    @map("privacy_preferences") // {defaultPrivacyLevel, preferredChain, notificationSettings}
   channels           Json?    // Array of {channelId, network, status, openedAt}
+  metadata           Json?    // Additional custom data
   createdAt          DateTime @default(now()) @map("created_at")
   updatedAt          DateTime @updatedAt @map("updated_at")
 
