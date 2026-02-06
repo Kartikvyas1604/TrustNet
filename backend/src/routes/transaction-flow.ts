@@ -229,7 +229,7 @@ async function handleExternalTransaction(
     // TODO: Implement balance locking
 
     // Notify organization admin(s)
-    webSocketService.emit('external_approval_requested', fromEmployee.organizationId, {
+    getWebSocketService().emit('external_approval_requested', fromEmployee.organizationId, {
       approvalId,
       employeeName: (fromEmployee.profileData as any)?.nickname,
       employeeEns: fromEmployee.ensName,
@@ -364,7 +364,7 @@ router.post('/external/approve', async (req: Request, res: Response) => {
       // Unlock employee's balance
 
       // Notify employee
-      webSocketService.emit('transaction_approved', employee.employeeId, {
+      getWebSocketService().emit('transaction_approved', employee.employeeId, {
         approvalId,
         transactionId,
         txHash,
@@ -461,7 +461,7 @@ router.post('/external/reject', async (req: Request, res: Response) => {
     });
 
     if (employee) {
-      webSocketService.emit('transaction_rejected', employee.employeeId, {
+      getWebSocketService().emit('transaction_rejected', employee.employeeId, {
         approvalId,
         reason,
         message: `Your transaction was declined. Reason: ${reason}`,

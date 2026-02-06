@@ -118,9 +118,13 @@ const startServer = async () => {
     await connectDB();
     logger.info('✓ MongoDB connected');
 
-    // Initialize Redis
-    await redisService.connect();
-    logger.info('✓ Redis connected');
+    // Initialize Redis (optional - non-blocking)
+    try {
+      await redisService.connect();
+      logger.info('✓ Redis connected');
+    } catch (error) {
+      logger.warn('⚠ Redis connection failed - continuing without Redis (caching disabled)');
+    }
 
     // Initialize ENS Service
     await ensService.initialize();
@@ -207,9 +211,13 @@ const gracefulShutdown = async () => {
     cronService.stopAll();
     logger.info('✓ Cron jobs stopped');
 
-    // Close Redis connection
-    await redisService.disconnect();
-    logger.info('✓ Redis disconnected');
+    // Close Redis connection (if connected)
+    try {
+      await redisService.disconnect();
+      logger.info('✓ Redis disconnected');
+    } catch (error) {
+      logger.warn('⚠ Redis disconnect skipped (was not connected)');
+    }
 
     // Close HTTP server
     httpServer.close(() => {

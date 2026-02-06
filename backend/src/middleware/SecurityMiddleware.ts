@@ -315,10 +315,24 @@ class SecurityMiddleware {
   corsOptions() {
     return {
       origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
-        const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:3000'];
+        // Always allow requests with no origin (server-to-server, curl, Postman, etc.)
+        if (!origin) {
+          callback(null, true);
+          return;
+        }
         
-        // Allow requests with no origin (mobile apps, Postman, etc.)
-        if (!origin || allowedOrigins.includes(origin)) {
+        // In development, allow all localhost origins
+        if (process.env.NODE_ENV !== 'production') {
+          if (origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:')) {
+            callback(null, true);
+            return;
+          }
+        }
+        
+        // Production mode: check allowed origins
+        const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:3000', 'http://localhost:3001'];
+        
+        if (allowedOrigins.includes(origin)) {
           callback(null, true);
         } else {
           logger.warn(`CORS blocked origin: ${origin}`);

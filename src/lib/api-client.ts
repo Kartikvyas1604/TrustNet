@@ -1,5 +1,5 @@
 // API Client for TrustNet Backend
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001';
 const WS_URL = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:5001';
 
 export interface ApiResponse<T = any> {
@@ -73,12 +73,32 @@ class ApiClient {
         },
       });
 
-      const data = await response.json();
+      // Check if response has content before parsing JSON
+      const contentType = response.headers.get('content-type');
+      const contentLength = response.headers.get('content-length');
+      
+      let data: any = {};
+      
+      // Only parse JSON if there's content and it's JSON
+      if (contentLength !== '0' && contentType?.includes('application/json')) {
+        const text = await response.text();
+        if (text && text.trim()) {
+          try {
+            data = JSON.parse(text);
+          } catch (parseError) {
+            console.error('JSON parse error:', parseError, 'Response text:', text);
+            return {
+              success: false,
+              error: 'Invalid JSON response from server',
+            };
+          }
+        }
+      }
 
       if (!response.ok) {
         return {
           success: false,
-          error: data.message || data.error || 'Request failed',
+          error: data.message || data.error || `Request failed with status ${response.status}`,
         };
       }
 

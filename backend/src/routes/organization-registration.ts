@@ -127,8 +127,11 @@ router.post(
           adminJobTitle,
           organizationType,
           kycStatus: 'PENDING',
+          subscriptionTier: 'STARTER',
           subscriptionStatus: 'TRIAL',
           paymentStatus: 'PENDING',
+          employeeLimit: 10,
+          kycDocuments: {},
           adminWallets: [],
         },
       });
