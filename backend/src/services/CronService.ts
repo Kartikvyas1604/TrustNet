@@ -224,8 +224,6 @@ class CronService {
             status: 'ACTIVE',
           }
         });
-          status: 'active',
-        });
 
         logger.info(`Processing payroll for ${org.name}: ${employees.length} employees`);
 
@@ -344,12 +342,11 @@ class CronService {
       });
 
       logger.info(`Cleaned up ${result.count || 0} old inactive employees`);
-({
+      // Archive old transactions (optional - currently just logging)
+      const oldTransactionCount = await Transaction.count({
         where: {
           createdAt: { lt: sixMonthsAgo },
-        }al - currently just logging)
-      const oldTransactionCount = await Transaction.countDocuments({
-        createdAt: { $lt: sixMonthsAgo },
+        }
       });
 
       logger.info(`Found ${oldTransactionCount} transactions older than 6 months (archival recommended)`);

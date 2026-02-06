@@ -101,20 +101,6 @@ class EmployeeService {
         }
       }
     });
-      walletAddresses: {
-        [input.chain]: input.walletAddress,
-      },
-      authKeyHash: matchedKey.keyHash,
-      ensName,
-      profileData: {
-        nickname: input.nickname,
-        email: input.email,
-      },
-      status: 'active',
-      privacyPreferences: {
-        defaultChain: input.chain,
-      },
-    });
 
     // Add employee to organization's Merkle tree
     await MerkleTreeService.addLeaf(
