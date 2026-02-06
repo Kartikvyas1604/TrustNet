@@ -1,10 +1,10 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 import { ArrowRightLeft, ShieldCheck, Zap, Lock, Scan, CheckCircle2, AlertCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { WalletConnect } from '@/components/wallet/WalletConnect'
 import { apiClient, type CreateTransactionRequest } from '@/lib/api-client'
@@ -26,6 +26,7 @@ export default function TransferPage() {
   const [isProcessing, setIsProcessing] = useState(false)
   const [error, setError] = useState<string>('')
   const [txHash, setTxHash] = useState<string>('')
+  const [complete, setComplete] = useState(false)
   
   // Form state
   const [recipientAddress, setRecipientAddress] = useState<string>('')
@@ -98,54 +99,30 @@ export default function TransferPage() {
       } else {
         setError(response.error || 'Transaction failed')
       }
-    } catch (err) {2 max-w-md">
-                              Transaction {txHash ? `hash ${txHash.slice(0, 10)}...` : 'verified'} on-chain.
-                            </p>
-                            <p className="text-vault-slate font-mono text-center mb-6 max-w-md text-sm">
-                              Zero-knowledge proof has been broadcast.
-                            </p>
-                            <Button onClick={reset} variant="default">New Transfer</Button>
-                        </div>
-                    ) : null}
+    } catch (err) {
+      console.error('Transaction error:', err)
+      setError(err instanceof Error ? err.message : 'Transaction failed')
+    } finally {
+      setIsProcessing(false)
+    }
+  }
 
-                    {error && (
-                        <div className="bg-red-500/10 border border-red-500/20 rounded-md p-4 m-4 flex items-start gap-3">
-                            <AlertCircle className="text-red-500 flex-shrink-0 mt-0.5" size={18} ENS/Address</span>
-                            </label>
-                            <div className="relative">
-                                <Scan className="absolute left-3 top-3 text-vault-slate w-5 h-5" />
-                                <input 
-                                    className="w-full bg-vault-slate/5 border border-vault-slate/20 rounded-md p-3 pl-10 font-mono text-sm text-white focus:border-vault-green focus:ring-1 focus:ring-vault-green outline-none transition-all"
-                                    placeholder="0x... or name.eth"
-                                    value={recipientAddress}
-                                    onChange={(e) => setRecipientAddress(e.target.value)}
-                                />
-                                {recipientAddress && recipientAddress.startsWith('0x') && recipientAddress.length > 10 && (
-                                  <div className="absolute right-3 top-2.5">
-                                      <Badge variant="outline" className="text-[10px] bg-green-500/10 text-green-500 border-green-500/20">VALID</Badge>
-                                  </div>
-                                )}
-                            </div>
-                        </div>
+  const reset = () => {
+    setComplete(false)
+    setTxHash('')
+    setError('')
+    setRecipientAddress('')
+    setAmount('')
+    setIsProcessing(false)
+  }
 
-                        <div className="space-y-2">
-                            <label className="text-xs font-mono text-vault-slate uppercase flex justify-between">
-                                <span>Amount</span>
-                                <span className="text-vault-slate">Currency: {currency}</span>
-                            </label>
-                            <div className="relative">
-                                <input 
-                                    type="number"
-                                    step="0.01"
-                                    min="0"
-                                    className="w-full bg-vault-slate/5 border border-vault-slate/20 rounded-md p-4 pr-24 font-mono text-2xl text-white focus:border-vault-green focus:ring-1 focus:ring-vault-green outline-none transition-all font-bold placeholder:text-vault-slate/20"
-                                    placeholder="0.00"
-                                    value={amount}
-                                    onChange={(e) => setAmount(e.target.value)}
-                                />
-                                <div className="absolute right-4 top-4 flex items-center gap-2">
-                                    <div className="h-6 w-px bg-vault-slate/20"></div>
-                                    <span className="font-bold text-vault-slate">{currency}
+  return (
+    <motion.div 
+        className="space-y-6"
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+    >
         <div className="flex justify-between items-end border-b border-vault-slate/20 pb-4">
             <div>
                 <h1 className="text-2xl font-bold text-white tracking-tight flex items-center gap-2">
@@ -197,7 +174,9 @@ export default function TransferPage() {
                                 <CheckCircle2 size={40} />
                             </motion.div>
                             <h2 className="text-2xl text-white font-bold mb-2">Transfer Complete</h2>
-                            <p className="text-vault-slate font-mono text-center mb-6 max-w-md">Transaction hash 0x7a... verified on-chain. Zero-knowledge proof has been broadcast.</p>
+                            <p className="text-vault-slate font-mono text-center mb-6 max-w-md">
+                              Transaction {txHash ? `hash ${txHash.slice(0, 10)}...` : 'verified'} on-chain. Zero-knowledge proof has been broadcast.
+                            </p>
                             <Button onClick={reset} variant="default">New Transfer</Button>
                         </div>
                     ) : null}
@@ -215,35 +194,54 @@ export default function TransferPage() {
                                 <Scan className="absolute left-3 top-3 text-vault-slate w-5 h-5" />
                                 <input 
                                     className="w-full bg-vault-slate/5 border border-vault-slate/20 rounded-md p-3 pl-10 font-mono text-sm text-white focus:border-vault-green focus:ring-1 focus:ring-vault-green outline-none transition-all"
-                                    placeholder="0x..."
+                                    placeholder="0x... or name.eth"
+                                    value={recipientAddress}
+                                    onChange={(e) => setRecipientAddress(e.target.value)}
                                 />
-                                <div className="absolute right-3 top-2.5">
-                                    <Badge variant="outline" className="text-[10px] bg-green-500/10 text-green-500 border-green-500/20">VALID</Badge>
-                                </div>
+                                {recipientAddress && recipientAddress.startsWith('0x') && recipientAddress.length > 10 && (
+                                  <div className="absolute right-3 top-2.5">
+                                      <Badge variant="outline" className="text-[10px] bg-green-500/10 text-green-500 border-green-500/20">VALID</Badge>
+                                  </div>
+                                )}
                             </div>
                         </div>
 
                         <div className="space-y-2">
                             <label className="text-xs font-mono text-vault-slate uppercase flex justify-between">
                                 <span>Amount</span>
-                                <span className="text-vault-slate">Available: 4,028.00 DVPN</span>
+                                <span className="text-vault-slate">Currency: {currency}</span>
                             </label>
                             <div className="relative">
                                 <input 
                                     type="number"
+                                    step="0.01"
+                                    min="0"
                                     className="w-full bg-vault-slate/5 border border-vault-slate/20 rounded-md p-4 pr-24 font-mono text-2xl text-white focus:border-vault-green focus:ring-1 focus:ring-vault-green outline-none transition-all font-bold placeholder:text-vault-slate/20"
                                     placeholder="0.00"
+                                    value={amount}
+                                    onChange={(e) => setAmount(e.target.value)}
                                 />
                                 <div className="absolute right-4 top-4 flex items-center gap-2">
                                     <div className="h-6 w-px bg-vault-slate/20"></div>
-                                    <
-                                onClick={handleTransfer} 
-                                disabled={isProcessing || !recipientAddress || !amount}
-                                className="w-full bg-vault-green text-black hover:bg-vault-green/90 h-12 text-lg font-bold cyber-btn disabled:opacity-50 disabled:cursor-not-allowed"
-                             >
-                                {isProcessing ? 'PROCESSING...' : 'SIGN TRANSFER'}
+                                    <span className="font-bold text-vault-slate">{currency}</span>
+                                </div>
                             </div>
                         </div>
+
+                        {error && (
+                            <div className="bg-red-500/10 border border-red-500/20 rounded-md p-4 flex items-start gap-3">
+                                <AlertCircle className="text-red-500 flex-shrink-0 mt-0.5" size={18} />
+                                <p className="text-red-500 text-sm">{error}</p>
+                            </div>
+                        )}
+
+                        <Button 
+                            onClick={handleTransfer} 
+                            disabled={isProcessing || !recipientAddress || !amount}
+                            className="w-full bg-vault-green text-black hover:bg-vault-green/90 h-12 text-lg font-bold disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            {isProcessing ? 'PROCESSING...' : 'SIGN TRANSFER'}
+                        </Button>
 
                         <div className="grid grid-cols-2 gap-4 pt-4">
                              <div className="p-3 bg-vault-slate/5 rounded-md border border-vault-slate/10">
@@ -255,7 +253,27 @@ export default function TransferPage() {
                              </div>
                              <div className="p-3 bg-vault-slate/5 rounded-md border border-vault-slate/10">
                                 <div className="text-[10px] text-vault-slate uppercase font-mono mb-1">Privacy Level</div>
-                         isLoadingTxs ? (
+                                <div className="text-sm font-bold text-white flex items-center gap-1">
+                                    <ShieldCheck size={12} className="text-vault-green" />
+                                    MAXIMUM
+                                </div>
+                             </div>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                {/* Wallet Connection */}
+                <WalletConnect />
+            </motion.div>
+
+            {/* Right Column: Recent Transfers */}
+            <motion.div variants={itemVariants} className="space-y-6">
+                <Card className="border-vault-slate/20 bg-vault-bg">
+                    <CardHeader>
+                        <CardTitle className="text-sm text-vault-slate uppercase">Recent Transactions</CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-0">
+                        {isLoadingTxs ? (
                           <div className="p-8 text-center text-vault-slate text-sm">Loading...</div>
                         ) : recentTransactions.length > 0 ? (
                           recentTransactions.map((tx, i) => (
@@ -291,36 +309,9 @@ export default function TransferPage() {
                           onClick={loadRecentTransactions}
                         >
                           Refresh
-                        
-
-                 {/* Recent Transfers */}
-                 <Card>
-                    <CardHeader>
-                        <CardTitle className="text-sm text-vault-slate uppercase">Recent Activity</CardTitle>
-                    </CardHeader>
-                    <CardContent className="p-0">
-                        {[1,2,3].map((i) => (
-                            <div key={i} className="flex items-center justify-between p-4 border-b border-vault-slate/10 last:border-0 hover:bg-vault-slate/5 transition-colors group">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-8 h-8 rounded-full bg-vault-slate/10 flex items-center justify-center text-vault-slate group-hover:bg-vault-green/20 group-hover:text-vault-green transition-colors">
-                                        <ArrowRightLeft size={14} />
-                                    </div>
-                                    <div>
-                                        <div className="text-xs font-mono text-white">Sent to 0x8a...29c</div>
-                                        <div className="text-[10px] text-vault-slate">2 mins ago</div>
-                                    </div>
-                                </div>
-                                <div className="text-right">
-                                    <div className="text-xs font-bold text-white">- 150.00 DVPN</div>
-                                    <div className="text-[10px] text-green-500">Confirmed</div>
-                                </div>
-                            </div>
-                        ))}
-                    </CardContent>
-                    <CardFooter className="pt-2">
-                        <Button variant="ghost" size="sm" className="w-full text-xs text-vault-slate hover:text-white">View Explorer</Button>
+                        </Button>
                     </CardFooter>
-                 </Card>
+                </Card>
             </motion.div>
         </div>
     </motion.div>
