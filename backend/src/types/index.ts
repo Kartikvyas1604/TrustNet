@@ -64,9 +64,6 @@ export interface ContractAddresses {
   stateChannel?: string;
 }
 
-// ============================================================================
-// EMPLOYEE TYPES
-// ============================================================================
 
 export interface IEmployee {
   _id?: ObjectId;
