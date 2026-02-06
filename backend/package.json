@@ -30,6 +30,9 @@
   ],
   "author": "TrustNet Team",
   "license": "MIT",
+  "prisma": {
+    "seed": "ts-node prisma/seed.ts"
+  },
   "dependencies": {
     "@ensdomains/ensjs": "^3.5.0",
     "@mysten/sui": "^2.3.0",

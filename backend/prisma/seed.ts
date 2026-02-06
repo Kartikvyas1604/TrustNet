@@ -21,10 +21,21 @@ async function main() {
     data: {
       organizationId: 'ORG-TECHCORP-001',
       name: 'TechCorp Solutions',
+      legalBusinessName: 'TechCorp Solutions LLC',
       registrationNumber: 'REG-TC-2020',
       country: 'United States',
+      businessAddress: {
+        street: '123 Tech Street',
+        city: 'San Francisco',
+        state: 'CA',
+        zip: '94102'
+      },
+      adminName: 'John Doe',
+      adminEmail: 'john.doe@techcorp.io',
+      adminPhone: '+1-415-555-0100',
+      adminJobTitle: 'CEO',
       kycStatus: 'APPROVED',
-      kycDocuments: ['doc1.pdf', 'doc2.pdf'],
+      kycDocuments: { businessCert: 'doc1.pdf', proofOfAddress: 'doc2.pdf' },
       subscriptionTier: 'BUSINESS',
       employeeLimit: 50,
       adminWallets: [
@@ -49,10 +60,21 @@ async function main() {
     data: {
       organizationId: 'ORG-CRYPTO-STARTUP-001',
       name: 'CryptoStartup Inc',
+      legalBusinessName: 'CryptoStartup Incorporated',
       registrationNumber: 'REG-CS-2023',
       country: 'United Kingdom',
+      businessAddress: {
+        street: '45 Innovation Road',
+        city: 'London',
+        state: 'Greater London',
+        zip: 'E1 6AN'
+      },
+      adminName: 'Jane Smith',
+      adminEmail: 'jane.smith@cryptostartup.io',
+      adminPhone: '+44-20-7946-0958',
+      adminJobTitle: 'Founder & CEO',
       kycStatus: 'APPROVED',
-      kycDocuments: ['kyc1.pdf'],
+      kycDocuments: { businessCert: 'kyc1.pdf' },
       subscriptionTier: 'STARTER',
       employeeLimit: 10,
       adminWallets: [
@@ -118,6 +140,28 @@ async function main() {
   });
 
   console.log('✅ Created auth keys');
+
+  // Create System Employee (for organizational transactions)
+  const systemEmployee = await prisma.employee.create({
+    data: {
+      organizationId: techCorp.organizationId,
+      employeeId: 'SYSTEM',
+      authKeyHash: await bcrypt.hash('SYSTEM-KEY', 10),
+      walletAddresses: {
+        ethereum: '0x0000000000000000000000000000000000000000',
+        sui: '0xsystem',
+      },
+      status: 'ACTIVE',
+      profileData: {
+        name: 'System Account',
+        department: 'System',
+        position: 'Automated System',
+      },
+      metadata: {
+        isSystemAccount: true,
+      },
+    },
+  });
 
   // Create Employees
   const emp1 = await prisma.employee.create({
