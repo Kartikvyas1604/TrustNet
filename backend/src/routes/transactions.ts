@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import TransactionService from '../services/TransactionService';
-import { transactionOrchestrationService } from '../services/TransactionOrchestrationService';
+import transactionOrchestrationService from '../services/TransactionOrchestrationService';
 import { sendSuccess, sendError, sendValidationError } from '../utils/response';
 import { isValidAmount } from '../utils/validation';
 import { PrivacyLevel, TransactionType } from '../types';
@@ -74,11 +74,14 @@ router.post('/orchestrated', async (req: Request, res: Response) => {
 
     // Process transaction through orchestration service
     const result = await transactionOrchestrationService.processTransaction({
-      organizationId,
-      employeeId,
-      recipient,
-      amount: parseFloat(amount),
-      privacyLevel: (privacyLevel as PrivacyLevel) || PrivacyLevel.STANDARD,
+      fromEmployeeId: employeeId,
+      toEmployeeId: recipient,
+      toAddress: recipient,
+      toEnsName: recipient,
+      amount: amount,
+      currency: 'USDC',
+      chain: 'sui',
+      privacyLevel: (privacyLevel as any) || 'ORGANIZATION_ONLY',
       memo,
       metadata,
     });

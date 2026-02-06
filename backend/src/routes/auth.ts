@@ -73,9 +73,14 @@ router.post(
       }
 
       // Check if employee exists
-      const employee = await Employee.findOne({
-        'walletAddresses.ethereum': verificationResult.address,
-        status: 'active',
+      const employee = await Employee.findFirst({
+        where: {
+          walletAddresses: {
+            path: ['ethereum'],
+            equals: verificationResult.address
+          },
+          status: 'ACTIVE',
+        }
       });
 
       if (!employee) {

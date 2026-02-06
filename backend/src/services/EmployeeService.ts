@@ -19,7 +19,9 @@ class EmployeeService {
    */
   async onboardEmployee(input: OnboardEmployeeInput): Promise<IEmployee> {
     // Find all auth keys and check against the provided key
-    const authKeys = await AuthKey.find({ status: 'unused' });
+    const authKeys = await AuthKey.findMany({ 
+      where: { status: 'UNUSED' } 
+    });
 
     let matchedKey = null;
     for (const key of authKeys) {
@@ -35,21 +37,28 @@ class EmployeeService {
     }
 
     // Get organization details
-    const organization = await Organization.findOne({
-      organizationId: matchedKey.organizationId,
+    const organization = await Organization.findUnique({
+      where: {
+        organizationId: matchedKey.organizationId,
+      }
     });
 
     if (!organization) {
       throw new Error('Organization not found');
     }
 
-    if (organization.kycStatus !== 'approved') {
+    if (organization.kycStatus !== 'APPROVED') {
       throw new Error('Organization KYC not approved');
     }
 
     // Check if wallet already exists
-    const existingEmployee = await Employee.findOne({
-      [`walletAddresses.${input.chain}`]: input.walletAddress,
+    const existingEmployee = await Employee.findFirst({
+      where: {
+        walletAddresses: {
+          path: [input.chain],
+          equals: input.walletAddress
+        }
+      }
     });
 
     if (existingEmployee) {
@@ -64,10 +73,34 @@ class EmployeeService {
       ? `${input.nickname.toLowerCase()}.${organization.organizationId}.eth`
       : `${employeeId}.${organization.organizationId}.eth`;
 
-    // Create employee record
-    const employee = new Employee({
-      employeeId,
-      organizationId: matchedKey.organizationId,
+    // Hash the auth key
+    const authKeyHash = crypto.createHash('sha256').update(input.authKey).digest('hex');
+
+    // Prepare wallet addresses object
+    const walletAddresses: any = {};
+    walletAddresses[input.chain] = input.walletAddress;
+
+    // Create employee record using Prisma
+    const employee = await Employee.create({
+      data: {
+        employeeId,
+        organization: {
+          connect: { organizationId: matchedKey.organizationId }
+        },
+        walletAddresses,
+        authKeyHash,
+        ensName,
+        profileData: {
+          nickname: input.nickname,
+          email: input.email,
+        },
+        status: 'ACTIVE',
+        privacyPreferences: {
+          defaultPrivacyLevel: 'ORGANIZATION_ONLY',
+          preferredChain: input.chain,
+        }
+      }
+    });
       walletAddresses: {
         [input.chain]: input.walletAddress,
       },
@@ -83,28 +116,32 @@ class EmployeeService {
       },
     });
 
-    await employee.save();
-
-    
-await MerkleTreeService.addLeaf(
-  matchedKey.organizationId,
-  employee.employeeId
-);
-    // Update auth key status
-    matchedKey.status = 'active';
-    matchedKey.assignedEmployeeId = employeeId;
-    matchedKey.usedAt = new Date();
-    await matchedKey.save();
-
-    console.log(
-      `Employee onboarded: ${employeeId} for organization: ${matchedKey.organizationId}`
+    // Add employee to organization's Merkle tree
+    await MerkleTreeService.addLeaf(
+      matchedKey.organizationId,
+      employee.employeeId
     );
-    return employee;
+
+    // Update auth key status
+    await AuthKey.update({
+      where: { id: matchedKey.id },
+      data: {
+        status: 'ACTIVE',
+        assignedEmployeeId: employeeId,
+        usedAt: new Date(),
+      }
+    });
+
+    logger.info(`Employee onboarded: ${employeeId} for organization: ${matchedKey.organizationId}`);
+    
+    return employee as any;
   }
 
   /**
    * Get employee by ID
-   */
+   */Unique({ 
+      where: { employeeId } 
+    }) as any
   async getEmployee(employeeId: string): Promise<IEmployee | null> {
     return await Employee.findOne({ employeeId });
   }

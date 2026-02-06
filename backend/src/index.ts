@@ -10,9 +10,9 @@ import redisService from './services/RedisService';
 import ensService from './services/ENSService';
 import webSocketService from './services/WebSocketService';
 import cronService from './services/CronService';
-import { transactionOrchestrationService } from './services/TransactionOrchestrationService';
-import { yellowNetworkService } from './services/YellowNetworkService';
-import { suiBlockchainService } from './services/SuiBlockchainService';
+import transactionOrchestrationService from './services/TransactionOrchestrationService';
+import yellowNetworkService from './services/YellowNetworkService';
+import suiBlockchainService from './services/SuiBlockchainService';
 import securityMiddleware from './middleware/SecurityMiddleware';
 
 // Import routes

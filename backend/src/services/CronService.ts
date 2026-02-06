@@ -124,19 +124,25 @@ class CronService {
     logger.info('Updating Merkle tree roots...');
     
     try {
-      const organizations = await Organization.find({ kycStatus: 'approved' });
+      const organizations = await Organization.findMany({ 
+        where: { kycStatus: 'APPROVED' } 
+      });
 
       for (const org of organizations) {
         // Get all employees in organization
-        const employees = await Employee.find({
-          organizationId: org.organizationId,
-          status: 'active',
+        const employees = await Employee.findMany({
+          where: {
+            organizationId: org.organizationId,
+            status: 'ACTIVE',
+          }
         });
 
         // Get recent transactions
-        const recentTransactions = await Transaction.find({
-          organizationId: org.organizationId,
-          createdAt: { $gte: new Date(Date.now() - 3600000) }, // Last hour
+        const recentTransactions = await Transaction.findMany({
+          where: {
+            organizationId: org.organizationId,
+            createdAt: { gte: new Date(Date.now() - 3600000) }, // Last hour
+          }
         });
 
         logger.info(`Updated Merkle root for org ${org.organizationId}: ${employees.length} employees, ${recentTransactions.length} transactions`);
@@ -163,9 +169,10 @@ class CronService {
     logger.info('Starting daily channel settlement...');
     
     try {
-      const employees = await Employee.find({
-        status: 'active',
-        'channels.status': 'open',
+      const employees = await Employee.findMany({
+        where: {
+          status: 'ACTIVE',
+        }
       });
 
       let settledCount = 0;
@@ -206,11 +213,17 @@ class CronService {
     logger.info('Starting weekly payroll distribution...');
     
     try {
-      const organizations = await Organization.find({ kycStatus: 'approved' });
+      const organizations = await Organization.findMany({ 
+        where: { kycStatus: 'APPROVED' } 
+      });
 
       for (const org of organizations) {
-        const employees = await Employee.find({
-          organizationId: org.organizationId,
+        const employees = await Employee.findMany({
+          where: {
+            organizationId: org.organizationId,
+            status: 'ACTIVE',
+          }
+        });
           status: 'active',
         });
 
@@ -260,17 +273,26 @@ class CronService {
       endOfMonth.setDate(0);
       endOfMonth.setHours(23, 59, 59, 999);
 
-      const organizations = await Organization.find({ kycStatus: 'approved' });
+      const organizations = await Organization.findMany({ 
+        where: { kycStatus: 'APPROVED' } 
+      });
 
       for (const org of organizations) {
         // Get monthly statistics
-        const transactions = await Transaction.find({
-          organizationId: org.organizationId,
-          createdAt: { $gte: startOfMonth, $lte: endOfMonth },
+        const transactions = await Transaction.findMany({
+          where: {
+            organizationId: org.organizationId,
+            createdAt: {
+              gte: startOfMonth,
+              lte: endOfMonth,
+            }
+          }
         });
 
-        const employees = await Employee.find({
-          organizationId: org.organizationId,
+        const employees = await Employee.findMany({
+          where: {
+            organizationId: org.organizationId
+          }
         });
 
         const report = {
@@ -315,13 +337,17 @@ class CronService {
 
       // Clean up old inactive employees (revoked for 6+ months)
       const result = await Employee.deleteMany({
-        status: 'revoked',
-        updatedAt: { $lt: sixMonthsAgo },
+        where: {
+          status: 'REVOKED',
+          updatedAt: { lt: sixMonthsAgo },
+        }
       });
 
-      logger.info(`Cleaned up ${result.deletedCount} old inactive employees`);
-
-      // Archive old transactions (optional - currently just logging)
+      logger.info(`Cleaned up ${result.count || 0} old inactive employees`);
+({
+        where: {
+          createdAt: { lt: sixMonthsAgo },
+        }al - currently just logging)
       const oldTransactionCount = await Transaction.countDocuments({
         createdAt: { $lt: sixMonthsAgo },
       });
@@ -343,7 +369,10 @@ class CronService {
     
     try {
       // This is a placeholder - actual implementation would query blockchain
-      const employees = await Employee.find({ status: 'active' }).limit(100);
+      const employees = await Employee.findMany({
+        where: { status: 'ACTIVE' },
+        take: 100
+      });
 
       for (const employee of employees) {
         if (employee.employeeId) {

@@ -69,9 +69,9 @@ class TransactionOrchestrationService {
         amount: request.amount,
         currency: request.currency || 'USDC',
         chain: request.chain || 'ethereum',
-        transactionType,
-        privacyLevel: request.privacyLevel || PrivacyLevel.ORGANIZATION_ONLY,
-        status: TransactionStatus.PENDING,
+        transactionType: transactionType as any,
+        privacyLevel: (request.privacyLevel || 'ORGANIZATION_ONLY') as any,
+        status: 'PENDING' as any,
         timestamp: new Date(),
         metadata: {
           memo: request.memo
@@ -101,7 +101,7 @@ class TransactionOrchestrationService {
       await TransactionModel.update(
         { transactionId: transaction.transactionId },
         {
-          status: TransactionStatus.CONFIRMED,
+          status: 'CONFIRMED' as any,
           blockchainTxHash: result.txHash
         }
       );
@@ -241,7 +241,10 @@ class TransactionOrchestrationService {
     
     // Try by ENS name
     if (request.toEnsName) {
-      return await EmployeeModel.findOne({ where: { ensName: request.toEnsName } });
+      const employees = await EmployeeModel.findMany({
+        where: { ensName: request.toEnsName }
+      });
+      return employees.length > 0 ? employees[0] : null;
     }
     
     // Try by wallet address (search in JSON field)
