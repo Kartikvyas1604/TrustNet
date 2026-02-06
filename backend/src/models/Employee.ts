@@ -1,95 +1,82 @@
-import mongoose, { Schema, Document } from 'mongoose';
+import prisma from '../config/database';
+import { Employee, Prisma } from '@prisma/client';
 
-export interface IEmployee extends Document {
-  employeeId: string;
-  organizationId: string;
-  walletAddresses: {
-    ethereum?: string;
-    sui?: string;
-    base?: string;
-  };
-  authKeyHash: string;
-  ensName?: string;
-  profileData: {
-    nickname?: string;
-    avatar?: string;
-    email?: string;
-  };
-  onboardingDate: Date;
-  status: 'active' | 'inactive' | 'revoked';
-  privacyPreferences: {
-    defaultChain?: string;
-    notificationMethod?: string;
-  };
-  channels: Array<{
-    channelId: string;
-    network: string;
-    status: string;
-  }>;
-  createdAt: Date;
-  updatedAt: Date;
-}
+// Type exports for Employee
+export type IEmployee = Employee;
+export type EmployeeCreateInput = Prisma.EmployeeCreateInput;
+export type EmployeeUpdateInput = Prisma.EmployeeUpdateInput;
+export type EmployeeWhereInput = Prisma.EmployeeWhereInput;
+export type EmployeeWhereUniqueInput = Prisma.EmployeeWhereUniqueInput;
 
-const EmployeeSchema: Schema = new Schema(
-  {
-    employeeId: {
-      type: String,
-      required: true,
-      unique: true,
-      index: true,
-    },
-    organizationId: {
-      type: String,
-      required: true,
-      index: true,
-    },
-    walletAddresses: {
-      ethereum: String,
-      sui: String,
-      base: String,
-    },
-    authKeyHash: {
-      type: String,
-      required: true,
-      unique: true,
-      index: true,
-    },
-    ensName: String,
-    profileData: {
-      nickname: String,
-      avatar: String,
-      email: String,
-    },
-    onboardingDate: {
-      type: Date,
-      default: Date.now,
-    },
-    status: {
-      type: String,
-      enum: ['active', 'inactive', 'revoked'],
-      default: 'active',
-      index: true,
-    },
-    privacyPreferences: {
-      defaultChain: String,
-      notificationMethod: String,
-    },
-    channels: [
-      {
-        channelId: String,
-        network: String,
-        status: String,
-      },
-    ],
+// Helper functions for Employee operations
+export const EmployeeModel = {
+  // Create
+  create: async (data: EmployeeCreateInput) => {
+    return prisma.employee.create({ data });
   },
-  {
-    timestamps: true,
-  }
-);
 
-// Composite indexes for efficient queries
-EmployeeSchema.index({ organizationId: 1, status: 1 });
-EmployeeSchema.index({ 'walletAddresses.ethereum': 1 });
-EmployeeSchema.index({ 'walletAddresses.sui': 1 });
+  // Find one
+  findOne: async (where: EmployeeWhereUniqueInput) => {
+    return prisma.employee.findUnique({ where });
+  },
 
-export default mongoose.model<IEmployee>('Employee', EmployeeSchema);
+  // Find many
+  findMany: async (params?: {
+    where?: EmployeeWhereInput;
+    orderBy?: Prisma.EmployeeOrderByWithRelationInput;
+    skip?: number;
+    take?: number;
+  }) => {
+    return prisma.employee.findMany(params);
+  },
+
+  // Update
+  update: async (where: EmployeeWhereUniqueInput, data: EmployeeUpdateInput) => {
+    return prisma.employee.update({ where, data });
+  },
+
+  // Delete
+  delete: async (where: EmployeeWhereUniqueInput) => {
+    return prisma.employee.delete({ where });
+  },
+
+  // Count
+  count: async (where?: EmployeeWhereInput) => {
+    return prisma.employee.count({ where });
+  },
+
+  // Find by employeeId
+  findByEmployeeId: async (employeeId: string) => {
+    return prisma.employee.findUnique({
+      where: { employeeId },
+    });
+  },
+
+  // Find by organization
+  findByOrganization: async (organizationId: string) => {
+    return prisma.employee.findMany({
+      where: { organizationId },
+    });
+  },
+
+  // Find by wallet address
+  findByWallet: async (walletAddress: string) => {
+    return prisma.employee.findMany({
+      where: {
+        OR: [
+          { walletAddresses: { path: ['ethereum'], equals: walletAddress } },
+          { walletAddresses: { path: ['base'], equals: walletAddress } },
+          { walletAddresses: { path: ['sui'], equals: walletAddress } },
+          { walletAddresses: { path: ['polygon'], equals: walletAddress } },
+          { walletAddresses: { path: ['arbitrum'], equals: walletAddress } },
+          { walletAddresses: { path: ['arc'], equals: walletAddress } },
+        ],
+      },
+    });
+  },
+
+  // Direct access to Prisma client
+  prisma: prisma.employee,
+};
+
+export default EmployeeModel;

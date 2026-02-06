@@ -1,108 +1,67 @@
-import mongoose, { Schema, Document } from 'mongoose';
+import prisma from '../config/database';
+import { Organization, Prisma } from '@prisma/client';
 
-export interface IOrganization extends Document {
-  organizationId: string;
-  name: string;
-  registrationNumber: string;
-  country: string;
-  kycStatus: 'pending' | 'approved' | 'rejected';
-  kycDocuments: string[];
-  subscriptionTier: 'starter' | 'business' | 'enterprise';
-  employeeLimit: number;
-  adminWallets: Array<{
-    address: string;
-    role: 'owner' | 'admin' | 'finance';
-  }>;
-  treasuryAddresses: {
-    ethereum?: string;
-    sui?: string;
-    base?: string;
-  };
-  ensName?: string;
-  contractAddresses: {
-    ethereum?: string;
-    sui?: string;
-  };
-  metadata: {
-    website?: string;
-    contactEmail?: string;
-    contactPerson?: string;
-  };
-  createdAt: Date;
-  updatedAt: Date;
-}
+// Type exports for Organization
+export type IOrganization = Organization;
+export type OrganizationCreateInput = Prisma.OrganizationCreateInput;
+export type OrganizationUpdateInput = Prisma.OrganizationUpdateInput;
+export type OrganizationWhereInput = Prisma.OrganizationWhereInput;
+export type OrganizationWhereUniqueInput = Prisma.OrganizationWhereUniqueInput;
 
-const OrganizationSchema: Schema = new Schema(
-  {
-    organizationId: {
-      type: String,
-      required: true,
-      unique: true,
-      index: true,
-    },
-    name: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-    registrationNumber: {
-      type: String,
-      required: true,
-    },
-    country: {
-      type: String,
-      required: true,
-    },
-    kycStatus: {
-      type: String,
-      enum: ['pending', 'approved', 'rejected'],
-      default: 'pending',
-      index: true,
-    },
-    kycDocuments: [String],
-    subscriptionTier: {
-      type: String,
-      enum: ['starter', 'business', 'enterprise'],
-      default: 'starter',
-    },
-    employeeLimit: {
-      type: Number,
-      required: true,
-      default: 10,
-    },
-    adminWallets: [
-      {
-        address: { type: String, required: true },
-        role: {
-          type: String,
-          enum: ['owner', 'admin', 'finance'],
-          default: 'admin',
-        },
-      },
-    ],
-    treasuryAddresses: {
-      ethereum: String,
-      sui: String,
-      base: String,
-    },
-    ensName: String,
-    contractAddresses: {
-      ethereum: String,
-      sui: String,
-    },
-    metadata: {
-      website: String,
-      contactEmail: String,
-      contactPerson: String,
-    },
+// Helper functions for Organization operations
+export const OrganizationModel = {
+  // Create
+  create: async (data: OrganizationCreateInput) => {
+    return prisma.organization.create({ data });
   },
-  {
-    timestamps: true,
-  }
-);
 
-// Indexes for efficient queries
-OrganizationSchema.index({ kycStatus: 1, createdAt: -1 });
-OrganizationSchema.index({ 'adminWallets.address': 1 });
+  // Find one
+  findOne: async (where: OrganizationWhereUniqueInput) => {
+    return prisma.organization.findUnique({ where });
+  },
 
-export default mongoose.model<IOrganization>('Organization', OrganizationSchema);
+  // Find many
+  findMany: async (params?: {
+    where?: OrganizationWhereInput;
+    orderBy?: Prisma.OrganizationOrderByWithRelationInput;
+    skip?: number;
+    take?: number;
+  }) => {
+    return prisma.organization.findMany(params);
+  },
+
+  // Update
+  update: async (where: OrganizationWhereUniqueInput, data: OrganizationUpdateInput) => {
+    return prisma.organization.update({ where, data });
+  },
+
+  // Delete
+  delete: async (where: OrganizationWhereUniqueInput) => {
+    return prisma.organization.delete({ where });
+  },
+
+  // Count
+  count: async (where?: OrganizationWhereInput) => {
+    return prisma.organization.count({ where });
+  },
+
+  // Find by organizationId
+  findByOrganizationId: async (organizationId: string) => {
+    return prisma.organization.findUnique({
+      where: { organizationId },
+    });
+  },
+
+  // Find with employees
+  findWithEmployees: async (organizationId: string) => {
+    return prisma.organization.findUnique({
+      where: { organizationId },
+      include: { employees: true },
+    });
+  },
+
+  // Direct access to Prisma client
+  prisma: prisma.organization,
+};
+
+export default OrganizationModel;

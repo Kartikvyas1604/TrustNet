@@ -1,0 +1,238 @@
+// This is your Prisma schema file for TrustNet with NeonDB
+// Organization: org-sweet-thunder-69253070
+// Project: still-wave-19438729
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ============================================================================
+// ORGANIZATION MODEL
+// ============================================================================
+
+model Organization {
+  id                 String   @id @default(cuid())
+  organizationId     String   @unique @map("organization_id")
+  name               String
+  registrationNumber String   @map("registration_number")
+  country            String
+  kycStatus          KYCStatus @default(PENDING) @map("kyc_status")
+  kycDocuments       String[] @map("kyc_documents")
+  subscriptionTier   SubscriptionTier @default(STARTER) @map("subscription_tier")
+  employeeLimit      Int      @default(10) @map("employee_limit")
+  adminWallets       Json     @map("admin_wallets") // Array of {address, role, addedAt}
+  treasuryAddresses  Json?    @map("treasury_addresses") // {ethereum, sui, base, polygon, arbitrum, arc}
+  ensName            String?  @map("ens_name")
+  contractAddresses  Json?    @map("contract_addresses") // {organizationRegistry, privacyPool, stateChannel}
+  metadata           Json?
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  employees          Employee[]
+  authKeys           AuthKey[]
+  transactions       Transaction[]
+  merkleTree         MerkleTree?
+
+  @@index([kycStatus, createdAt])
+  @@index([organizationId])
+  @@map("organizations")
+}
+
+enum KYCStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  EXPIRED
+}
+
+enum SubscriptionTier {
+  STARTER
+  BUSINESS
+  ENTERPRISE
+}
+
+// ============================================================================
+// EMPLOYEE MODEL
+// ============================================================================
+
+model Employee {
+  id                 String   @id @default(cuid())
+  employeeId         String   @unique @map("employee_id")
+  organizationId     String   @map("organization_id")
+  walletAddresses    Json     @map("wallet_addresses") // {ethereum, sui, base, polygon, arbitrum, arc}
+  authKeyHash        String   @unique @map("auth_key_hash")
+  ensName            String?  @map("ens_name")
+  profileData        Json?    @map("profile_data") // {nickname, avatar, email, phoneNumber}
+  onboardingDate     DateTime @default(now()) @map("onboarding_date")
+  status             EmployeeStatus @default(ACTIVE)
+  privacyPreferences Json?    @map("privacy_preferences") // {defaultPrivacyLevel, preferredChain, notificationSettings}
+  channels           Json?    // Array of {channelId, network, status, openedAt}
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  organization       Organization @relation(fields: [organizationId], references: [organizationId], onDelete: Cascade)
+  transactionsFrom   Transaction[] @relation("TransactionsFrom")
+  transactionsTo     Transaction[] @relation("TransactionsTo")
+
+  @@index([organizationId, status])
+  @@index([authKeyHash])
+  @@index([employeeId])
+  @@map("employees")
+}
+
+enum EmployeeStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  REVOKED
+}
+
+// ============================================================================
+// AUTH KEY MODEL
+// ============================================================================
+
+model AuthKey {
+  id                 String   @id @default(cuid())
+  keyHash            String   @unique @map("key_hash")
+  organizationId     String   @map("organization_id")
+  status             AuthKeyStatus @default(UNUSED)
+  assignedEmployeeId String?  @map("assigned_employee_id")
+  generatedAt        DateTime @default(now()) @map("generated_at")
+  usedAt             DateTime? @map("used_at")
+  revokedAt          DateTime? @map("revoked_at")
+  expiresAt          DateTime? @map("expires_at")
+  metadata           Json?
+
+  // Relations
+  organization       Organization @relation(fields: [organizationId], references: [organizationId], onDelete: Cascade)
+
+  @@index([organizationId, status])
+  @@index([keyHash])
+  @@map("auth_keys")
+}
+
+enum AuthKeyStatus {
+  UNUSED
+  ACTIVE
+  REVOKED
+  EXPIRED
+}
+
+// ============================================================================
+// TRANSACTION MODEL
+// ============================================================================
+
+model Transaction {
+  id                 String   @id @default(cuid())
+  transactionId      String   @unique @map("transaction_id")
+  organizationId     String   @map("organization_id")
+  fromEmployeeId     String   @map("from_employee_id")
+  toEmployeeId       String   @map("to_employee_id")
+  amount             String   // Using String to avoid precision issues
+  currency           String
+  chain              String
+  transactionType    TransactionType @map("transaction_type")
+  blockchainTxHash   String?  @map("blockchain_tx_hash")
+  privacyLevel       PrivacyLevel @default(ORGANIZATION_ONLY) @map("privacy_level")
+  encryptedDetails   String?  @map("encrypted_details")
+  commitmentHash     String?  @map("commitment_hash")
+  nullifier          String?
+  status             TransactionStatus @default(PENDING)
+  timestamp          DateTime @default(now())
+  gasUsed            String?  @map("gas_used")
+  metadata           Json?
+  createdAt          DateTime @default(now()) @map("created_at")
+
+  // Relations
+  organization       Organization @relation(fields: [organizationId], references: [organizationId], onDelete: Cascade)
+  fromEmployee       Employee @relation("TransactionsFrom", fields: [fromEmployeeId], references: [employeeId])
+  toEmployee         Employee @relation("TransactionsTo", fields: [toEmployeeId], references: [employeeId])
+
+  @@index([organizationId, timestamp(sort: Desc)])
+  @@index([fromEmployeeId, timestamp(sort: Desc)])
+  @@index([toEmployeeId, timestamp(sort: Desc)])
+  @@index([blockchainTxHash])
+  @@index([status])
+  @@map("transactions")
+}
+
+enum TransactionType {
+  YELLOW_OFFCHAIN
+  UNISWAP_PRIVACY
+  SUI_DIRECT
+  CROSS_CHAIN
+  PAYROLL
+}
+
+enum TransactionStatus {
+  PENDING
+  PROCESSING
+  CONFIRMED
+  FAILED
+  CANCELLED
+}
+
+enum PrivacyLevel {
+  PUBLIC
+  ORGANIZATION_ONLY
+  FULLY_PRIVATE
+}
+
+// ============================================================================
+// MERKLE TREE MODEL
+// ============================================================================
+
+model MerkleTree {
+  id                 String   @id @default(cuid())
+  organizationId     String   @unique @map("organization_id")
+  treeRoot           String   @map("tree_root")
+  treeHeight         Int      @map("tree_height")
+  leaves             Json     // Array of leaf hashes
+  lastUpdatedAt      DateTime @default(now()) @map("last_updated_at")
+  previousRoots      Json?    @map("previous_roots") // Array of {root, timestamp, employeeCount}
+
+  // Relations
+  organization       Organization @relation(fields: [organizationId], references: [organizationId], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@map("merkle_trees")
+}
+
+// ============================================================================
+// STATE CHANNEL MODEL (Optional - for future use)
+// ============================================================================
+
+model StateChannel {
+  id                 String   @id @default(cuid())
+  channelId          String   @unique @map("channel_id")
+  employeeId         String   @map("employee_id")
+  organizationId     String   @map("organization_id")
+  channelState       Json     @map("channel_state") // {balances, nonce, signatures, timeout}
+  depositAmount      String   @map("deposit_amount")
+  currentBalance     String   @map("current_balance")
+  status             ChannelStatus @default(OPENING)
+  openedAt           DateTime @default(now()) @map("opened_at")
+  lastUpdatedAt      DateTime @updatedAt @map("last_updated_at")
+  closedAt           DateTime? @map("closed_at")
+  settlementTxHash   String?  @map("settlement_tx_hash")
+  metadata           Json?
+
+  @@index([employeeId])
+  @@index([organizationId])
+  @@index([status])
+  @@map("state_channels")
+}
+
+enum ChannelStatus {
+  OPENING
+  OPEN
+  SETTLING
+  CLOSED
+  DISPUTED
+}

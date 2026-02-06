@@ -1,11 +1,5 @@
-import { ObjectId } from 'mongoose';
-
-// ============================================================================
-// ORGANIZATION TYPES
-// ============================================================================
-
 export interface IOrganization {
-  _id?: ObjectId;
+  id?: string;
   organizationId: string; // Unique identifier (e.g., "acme-corp")
   name: string;
   registrationNumber?: string;
@@ -66,7 +60,7 @@ export interface ContractAddresses {
 
 
 export interface IEmployee {
-  _id?: ObjectId;
+  id?: string;
   employeeId: string; // Unique identifier
   organizationId: string; // Reference to parent organization
   walletAddresses: WalletAddresses;
@@ -134,7 +128,7 @@ export interface StateChannelReference {
 // ============================================================================
 
 export interface IAuthKey {
-  _id?: ObjectId;
+  id?: string;
   keyHash: string; // SHA256 hash of the key
   organizationId: string;
   status: AuthKeyStatus;
@@ -158,7 +152,7 @@ export enum AuthKeyStatus {
 // ============================================================================
 
 export interface ITransaction {
-  _id?: ObjectId;
+  id?: string;
   transactionId: string;
   organizationId: string;
   fromEmployeeId: string;
@@ -199,7 +193,7 @@ export enum TransactionStatus {
 // ============================================================================
 
 export interface IStateChannel {
-  _id?: ObjectId;
+  id?: string;
   channelId: string;
   employeeId: string;
   organizationId: string;
@@ -236,7 +230,7 @@ export enum ChannelStatus {
 // ============================================================================
 
 export interface IMerkleTree {
-  _id?: ObjectId;
+  id?: string;
   organizationId: string;
   treeRoot: string;
   treeHeight: number;

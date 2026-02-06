@@ -1,54 +1,69 @@
-import mongoose, { Schema, Document } from 'mongoose';
+import prisma from '../config/database';
+import { AuthKey, Prisma } from '@prisma/client';
 
-export interface IAuthKey extends Document {
-  keyHash: string;
-  organizationId: string;
-  status: 'unused' | 'active' | 'revoked';
-  assignedEmployeeId?: string;
-  generatedAt: Date;
-  usedAt?: Date;
-  revokedAt?: Date;
-  metadata: {
-    generatedBy?: string;
-    purpose?: string;
-  };
-}
+// Type exports for AuthKey
+export type IAuthKey = AuthKey;
+export type AuthKeyCreateInput = Prisma.AuthKeyCreateInput;
+export type AuthKeyUpdateInput = Prisma.AuthKeyUpdateInput;
+export type AuthKeyWhereInput = Prisma.AuthKeyWhereInput;
+export type AuthKeyWhereUniqueInput = Prisma.AuthKeyWhereUniqueInput;
 
-const AuthKeySchema: Schema = new Schema({
-  keyHash: {
-    type: String,
-    required: true,
-    unique: true,
-    index: true,
+// Helper functions for AuthKey operations
+export const AuthKeyModel = {
+  // Create
+  create: async (data: AuthKeyCreateInput) => {
+    return prisma.authKey.create({ data });
   },
-  organizationId: {
-    type: String,
-    required: true,
-    index: true,
-  },
-  status: {
-    type: String,
-    enum: ['unused', 'active', 'revoked'],
-    default: 'unused',
-    index: true,
-  },
-  assignedEmployeeId: {
-    type: String,
-    default: null,
-  },
-  generatedAt: {
-    type: Date,
-    default: Date.now,
-  },
-  usedAt: Date,
-  revokedAt: Date,
-  metadata: {
-    generatedBy: String,
-    purpose: String,
-  },
-});
 
-// Composite index for finding available keys
-AuthKeySchema.index({ organizationId: 1, status: 1 });
+  // Find one
+  findOne: async (where: AuthKeyWhereUniqueInput) => {
+    return prisma.authKey.findUnique({ where });
+  },
 
-export default mongoose.model<IAuthKey>('AuthKey', AuthKeySchema);
+  // Find many
+  findMany: async (params?: {
+    where?: AuthKeyWhereInput;
+    orderBy?: Prisma.AuthKeyOrderByWithRelationInput;
+    skip?: number;
+    take?: number;
+  }) => {
+    return prisma.authKey.findMany(params);
+  },
+
+  // Update
+  update: async (where: AuthKeyWhereUniqueInput, data: AuthKeyUpdateInput) => {
+    return prisma.authKey.update({ where, data });
+  },
+
+  // Delete
+  delete: async (where: AuthKeyWhereUniqueInput) => {
+    return prisma.authKey.delete({ where });
+  },
+
+  // Count
+  count: async (where?: AuthKeyWhereInput) => {
+    return prisma.authKey.count({ where });
+  },
+
+  // Find by keyHash
+  findByKeyHash: async (keyHash: string) => {
+    return prisma.authKey.findUnique({
+      where: { keyHash },
+    });
+  },
+
+  // Find unused keys for organization
+  findUnusedKeys: async (organizationId: string) => {
+    return prisma.authKey.findMany({
+      where: {
+        organizationId,
+        status: 'UNUSED',
+      },
+    });
+  },
+
+  // Direct access to Prisma client
+  prisma: prisma.authKey,
+};
+
+export default AuthKeyModel;

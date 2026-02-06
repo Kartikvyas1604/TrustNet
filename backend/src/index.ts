@@ -2,7 +2,7 @@ import express, { Express, Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import http from 'http';
-import connectDB from './config/database';
+import { connectDB } from './config/database';
 
 // Import services
 import logger from './utils/logger';

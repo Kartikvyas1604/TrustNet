@@ -1,31 +1,63 @@
-import mongoose, { Schema, Document } from 'mongoose';
+import prisma from '../config/database';
+import { MerkleTree, Prisma } from '@prisma/client';
 
-export interface IMerkleLeaf {
-  index: number;
-  hash: string;
-}
+// Type exports for MerkleTree
+export type IMerkleTree = MerkleTree;
+export type MerkleTreeCreateInput = Prisma.MerkleTreeCreateInput;
+export type MerkleTreeUpdateInput = Prisma.MerkleTreeUpdateInput;
+export type MerkleTreeWhereInput = Prisma.MerkleTreeWhereInput;
+export type MerkleTreeWhereUniqueInput = Prisma.MerkleTreeWhereUniqueInput;
 
-export interface IMerkleTree extends Document {
-  organizationId: string;
-  root: string;
-  depth: number;
-  leaves: IMerkleLeaf[];
-  version: number;
-  updatedAt: Date;
-}
+// Helper functions for MerkleTree operations
+export const MerkleTreeModel = {
+  // Create
+  create: async (data: MerkleTreeCreateInput) => {
+    return prisma.merkleTree.create({ data });
+  },
 
-const MerkleTreeSchema = new Schema<IMerkleTree>({
-  organizationId: { type: String, required: true, unique: true },
-  root: { type: String, required: true },
-  depth: { type: Number, default: 20 },
-  version: { type: Number, default: 1 },
-  leaves: [
-    {
-      index: Number,
-      hash: String,
-    },
-  ],
-  updatedAt: { type: Date, default: Date.now },
-});
+  // Find one
+  findOne: async (where: MerkleTreeWhereUniqueInput) => {
+    return prisma.merkleTree.findUnique({ where });
+  },
 
-export default mongoose.model<IMerkleTree>('MerkleTree', MerkleTreeSchema);
+  // Find many
+  findMany: async (params?: {
+    where?: MerkleTreeWhereInput;
+    orderBy?: Prisma.MerkleTreeOrderByWithRelationInput;
+    skip?: number;
+    take?: number;
+  }) => {
+    return prisma.merkleTree.findMany(params);
+  },
+
+  // Update
+  update: async (where: MerkleTreeWhereUniqueInput, data: MerkleTreeUpdateInput) => {
+    return prisma.merkleTree.update({ where, data });
+  },
+
+  // Delete
+  delete: async (where: MerkleTreeWhereUniqueInput) => {
+    return prisma.merkleTree.delete({ where });
+  },
+
+  // Find by organizationId
+  findByOrganization: async (organizationId: string) => {
+    return prisma.merkleTree.findUnique({
+      where: { organizationId },
+    });
+  },
+
+  // Upsert (create or update)
+  upsert: async (organizationId: string, data: MerkleTreeCreateInput) => {
+    return prisma.merkleTree.upsert({
+      where: { organizationId },
+      create: data,
+      update: data,
+    });
+  },
+
+  // Direct access to Prisma client
+  prisma: prisma.merkleTree,
+};
+
+export default MerkleTreeModel;

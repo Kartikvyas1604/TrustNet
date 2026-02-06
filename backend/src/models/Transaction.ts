@@ -1,93 +1,90 @@
-import mongoose, { Schema, Document } from 'mongoose';
+import prisma from '../config/database';
+import { Transaction, Prisma } from '@prisma/client';
 
-export interface ITransaction extends Document {
-  transactionId: string;
-  organizationId: string;
-  fromEmployeeId: string;
-  toEmployeeId: string;
-  amount: number;
-  currency: string;
-  chain: string;
-  transactionType: 'yellow_offchain' | 'uniswap_privacy' | 'sui_direct' | 'standard';
-  blockchainTxHash?: string;
-  privacyLevel: 'public' | 'organization-only' | 'fully-private';
-  status: 'pending' | 'confirmed' | 'failed';
-  timestamp: Date;
-  gasUsed?: number;
-  metadata: {
-    memo?: string;
-    tags?: string[];
-  };
-}
+// Type exports for Transaction
+export type ITransaction = Transaction;
+export type TransactionCreateInput = Prisma.TransactionCreateInput;
+export type TransactionUpdateInput = Prisma.TransactionUpdateInput;
+export type TransactionWhereInput = Prisma.TransactionWhereInput;
+export type TransactionWhereUniqueInput = Prisma.TransactionWhereUniqueInput;
 
-const TransactionSchema: Schema = new Schema({
-  transactionId: {
-    type: String,
-    required: true,
-    unique: true,
-    index: true,
+// Helper functions for Transaction operations
+export const TransactionModel = {
+  // Create
+  create: async (data: TransactionCreateInput) => {
+    return prisma.transaction.create({ data });
   },
-  organizationId: {
-    type: String,
-    required: true,
-    index: true,
-  },
-  fromEmployeeId: {
-    type: String,
-    required: true,
-    index: true,
-  },
-  toEmployeeId: {
-    type: String,
-    required: true,
-    index: true,
-  },
-  amount: {
-    type: Number,
-    required: true,
-  },
-  currency: {
-    type: String,
-    required: true,
-    default: 'USDC',
-  },
-  chain: {
-    type: String,
-    required: true,
-  },
-  transactionType: {
-    type: String,
-    enum: ['yellow_offchain', 'uniswap_privacy', 'sui_direct', 'standard'],
-    default: 'standard',
-  },
-  blockchainTxHash: String,
-  privacyLevel: {
-    type: String,
-    enum: ['public', 'organization-only', 'fully-private'],
-    default: 'organization-only',
-  },
-  status: {
-    type: String,
-    enum: ['pending', 'confirmed', 'failed'],
-    default: 'pending',
-    index: true,
-  },
-  timestamp: {
-    type: Date,
-    default: Date.now,
-    index: true,
-  },
-  gasUsed: Number,
-  metadata: {
-    memo: String,
-    tags: [String],
-  },
-});
 
-// Composite indexes for efficient transaction queries
-TransactionSchema.index({ organizationId: 1, timestamp: -1 });
-TransactionSchema.index({ fromEmployeeId: 1, timestamp: -1 });
-TransactionSchema.index({ toEmployeeId: 1, timestamp: -1 });
-TransactionSchema.index({ blockchainTxHash: 1 });
+  // Find one
+  findOne: async (where: TransactionWhereUniqueInput) => {
+    return prisma.transaction.findUnique({ where });
+  },
 
-export default mongoose.model<ITransaction>('Transaction', TransactionSchema);
+  // Find many
+  findMany: async (params?: {
+    where?: TransactionWhereInput;
+    orderBy?: Prisma.TransactionOrderByWithRelationInput;
+    skip?: number;
+    take?: number;
+  }) => {
+    return prisma.transaction.findMany(params);
+  },
+
+  // Update
+  update: async (where: TransactionWhereUniqueInput, data: TransactionUpdateInput) => {
+    return prisma.transaction.update({ where, data });
+  },
+
+  // Delete
+  delete: async (where: TransactionWhereUniqueInput) => {
+    return prisma.transaction.delete({ where });
+  },
+
+  // Count
+  count: async (where?: TransactionWhereInput) => {
+    return prisma.transaction.count({ where });
+  },
+
+  // Find by transactionId
+  findByTransactionId: async (transactionId: string) => {
+    return prisma.transaction.findUnique({
+      where: { transactionId },
+    });
+  },
+
+  // Find by organization with pagination
+  findByOrganization: async (
+    organizationId: string,
+    page: number = 1,
+    pageSize: number = 50
+  ) => {
+    return prisma.transaction.findMany({
+      where: { organizationId },
+      orderBy: { timestamp: 'desc' },
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+    });
+  },
+
+  // Find by employee
+  findByEmployee: async (employeeId: string) => {
+    return prisma.transaction.findMany({
+      where: {
+        OR: [{ fromEmployeeId: employeeId }, { toEmployeeId: employeeId }],
+      },
+      orderBy: { timestamp: 'desc' },
+    });
+  },
+
+  // Find by blockchain hash
+  findByTxHash: async (blockchainTxHash: string) => {
+    return prisma.transaction.findFirst({
+      where: { blockchainTxHash },
+    });
+  },
+
+  // Direct access to Prisma client
+  prisma: prisma.transaction,
+};
+
+export default TransactionModel;

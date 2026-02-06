@@ -1,7 +1,8 @@
 import { ethers } from 'ethers';
-import Employee from '../models/Employee';
-import Organization from '../models/Organization';
-import Transaction from '../models/Transaction';
+import EmployeeModel from '../models/Employee';
+import OrganizationModel from '../models/Organization';
+import TransactionModel from '../models/Transaction';
+import prisma from '../config/database';
 import logger from '../utils/logger';
 import { generateTransactionId, parseUSDC } from '../utils/helpers';
 import { 
@@ -23,8 +24,8 @@ class TransactionOrchestrationService {
       logger.info('Processing transaction request:', request);
       
       // 1. Validate and resolve sender
-      const sender = await Employee.findOne({ employeeId: request.fromEmployeeId });
-      if (!sender || sender.status !== 'active') {
+      const sender = await EmployeeModel.findByEmployeeId(request.fromEmployeeId);
+      if (!sender || sender.status !== 'ACTIVE') {
         throw new Error('Invalid sender employee');
       }
       
@@ -54,11 +55,17 @@ class TransactionOrchestrationService {
       
       // 6. Create transaction record
       const transactionId = generateTransactionId();
-      const transaction = new Transaction({
+      const transaction = await TransactionModel.create({
         transactionId,
-        organizationId: sender.organizationId,
-        fromEmployeeId: sender.employeeId,
-        toEmployeeId: recipient.employeeId,
+        organization: {
+          connect: { organizationId: sender.organizationId }
+        },
+        fromEmployee: {
+          connect: { employeeId: sender.employeeId }
+        },
+        toEmployee: {
+          connect: { employeeId: recipient.employeeId }
+        },
         amount: request.amount,
         currency: request.currency || 'USDC',
         chain: request.chain || 'ethereum',
@@ -70,8 +77,6 @@ class TransactionOrchestrationService {
           memo: request.memo
         }
       });
-      
-      await transaction.save();
       
       // 7. Route to appropriate handler
       let result;
@@ -93,9 +98,13 @@ class TransactionOrchestrationService {
       }
       
       // 8. Update transaction status
-      transaction.status = TransactionStatus.CONFIRMED;
-      transaction.blockchainTxHash = result.txHash;
-      await transaction.save();
+      await TransactionModel.update(
+        { transactionId: transaction.transactionId },
+        {
+          status: TransactionStatus.CONFIRMED,
+          blockchainTxHash: result.txHash
+        }
+      );
       
       logger.info(`Transaction ${transactionId} completed successfully`);
       
@@ -227,20 +236,18 @@ class TransactionOrchestrationService {
   private async resolveRecipient(request: CreateTransactionRequest): Promise<any> {
     // Try by employee ID
     if (request.toEmployeeId) {
-      return await Employee.findOne({ employeeId: request.toEmployeeId });
+      return await EmployeeModel.findByEmployeeId(request.toEmployeeId);
     }
     
     // Try by ENS name
     if (request.toEnsName) {
-      return await Employee.findOne({ ensName: request.toEnsName });
+      return await EmployeeModel.findOne({ where: { ensName: request.toEnsName } });
     }
     
-    // Try by wallet address
+    // Try by wallet address (search in JSON field)
     if (request.toAddress) {
-      const chain = request.chain || 'ethereum';
-      return await Employee.findOne({ 
-        [`walletAddresses.${chain}`]: request.toAddress 
-      });
+      const employees = await EmployeeModel.findByWallet(request.toAddress);
+      return employees.length > 0 ? employees[0] : null;
     }
     
     return null;
@@ -256,19 +263,20 @@ class TransactionOrchestrationService {
   ): Promise<any> {
     const skip = (page - 1) * pageSize;
     
-    const transactions = await Transaction.find({
-      $or: [
-        { fromEmployeeId: employeeId },
-        { toEmployeeId: employeeId }
-      ]
-    })
-    .sort({ timestamp: -1 })
-    .skip(skip)
-    .limit(pageSize)
-    .lean();
+    const transactions = await TransactionModel.findMany({
+      where: {
+        OR: [
+          { fromEmployeeId: employeeId },
+          { toEmployeeId: employeeId }
+        ]
+      },
+      orderBy: { timestamp: 'desc' },
+      skip: skip,
+      take: pageSize
+    });
     
-    const total = await Transaction.countDocuments({
-      $or: [
+    const total = await TransactionModel.count({
+      OR: [
         { fromEmployeeId: employeeId },
         { toEmployeeId: employeeId }
       ]
@@ -289,7 +297,7 @@ class TransactionOrchestrationService {
    * Gets transaction by ID
    */
   async getTransaction(transactionId: string): Promise<any> {
-    const transaction = await Transaction.findOne({ transactionId }).lean();
+    const transaction = await TransactionModel.findByTransactionId(transactionId);
     
     if (!transaction) {
       throw new Error('Transaction not found');
@@ -302,22 +310,31 @@ class TransactionOrchestrationService {
    * Gets organization transaction statistics
    */
   async getOrganizationStats(organizationId: string): Promise<any> {
-    const totalTransactions = await Transaction.countDocuments({ organizationId });
+    const totalTransactions = await TransactionModel.count({ organizationId });
     
-    const totalVolume = await Transaction.aggregate([
-      { $match: { organizationId, status: TransactionStatus.CONFIRMED } },
-      { $group: { _id: null, total: { $sum: { $toDouble: '$amount' } } } }
-    ]);
+    // Get total volume using raw SQL for sum
+    const volumeResult = await prisma.$queryRaw<Array<{total: string}>>`
+      SELECT COALESCE(SUM(CAST(amount AS DECIMAL)), 0) as total
+      FROM transactions
+      WHERE organization_id = ${organizationId}
+      AND status = ${TransactionStatus.CONFIRMED}
+    `;
     
-    const transactionsByType = await Transaction.aggregate([
-      { $match: { organizationId } },
-      { $group: { _id: '$transactionType', count: { $sum: 1 } } }
-    ]);
+    // Get transactions by type
+    const typeResult = await prisma.$queryRaw<Array<{transaction_type: string, count: bigint}>>`
+      SELECT transaction_type, COUNT(*) as count
+      FROM transactions
+      WHERE organization_id = ${organizationId}
+      GROUP BY transaction_type
+    `;
     
     return {
       totalTransactions,
-      totalVolume: totalVolume[0]?.total || 0,
-      transactionsByType
+      totalVolume: parseFloat(volumeResult[0]?.total || '0'),
+      transactionsByType: typeResult.map((r: any) => ({
+        _id: r.transaction_type,
+        count: Number(r.count)
+      }))
     };
   }
 }
