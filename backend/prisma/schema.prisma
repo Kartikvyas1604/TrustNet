@@ -19,16 +19,46 @@ model Organization {
   id                 String   @id @default(cuid())
   organizationId     String   @unique @map("organization_id")
   name               String
+  legalBusinessName  String   @map("legal_business_name")
   registrationNumber String   @map("registration_number")
   country            String
+  businessAddress    Json     @map("business_address") // {street, city, state, zip}
+  industry           String?
+  websiteUrl         String?  @map("website_url")
+  
+  // Admin Contact Info
+  adminName          String   @map("admin_name")
+  adminEmail         String   @map("admin_email")
+  adminPhone         String   @map("admin_phone")
+  adminJobTitle      String   @map("admin_job_title")
+  
+  // KYC & Verification
   kycStatus          KYCStatus @default(PENDING) @map("kyc_status")
-  kycDocuments       String[] @map("kyc_documents")
+  kycDocuments       Json?    @map("kyc_documents") // {businessCert: url, proofOfAddress: url, adminId: url, taxDoc: url}
+  verifiedAt         DateTime? @map("verified_at")
+  verificationNotes  String?  @map("verification_notes")
+  
+  // Subscription & Payment
   subscriptionTier   SubscriptionTier @default(STARTER) @map("subscription_tier")
   employeeLimit      Int      @default(10) @map("employee_limit")
-  adminWallets       Json     @map("admin_wallets") // Array of {address, role, addedAt}
+  subscriptionStatus SubscriptionStatus @default(TRIAL) @map("subscription_status")
+  paymentStatus      PaymentStatus @default(PENDING) @map("payment_status")
+  monthlyPrice       String?  @map("monthly_price")
+  annualPrice        String?  @map("annual_price")
+  billingCycle       BillingCycle @default(MONTHLY) @map("billing_cycle")
+  nextBillingDate    DateTime? @map("next_billing_date")
+  stripeCustomerId   String?  @unique @map("stripe_customer_id")
+  stripeSubscriptionId String? @unique @map("stripe_subscription_id")
+  
+  organizationType   String?  @map("organization_type") // Startup, Small Business, Mid-Market, Enterprise
+  
+  // Wallets & Blockchain
+  adminWallets       Json     @map("admin_wallets") // Array of {address, role, addedAt, verified}
   treasuryAddresses  Json?    @map("treasury_addresses") // {ethereum, sui, base, polygon, arbitrum, arc}
-  ensName            String?  @map("ens_name")
+  treasuryBalance    Json?    @map("treasury_balance") // {ethereum: "0", sui: "0", base: "0", ...}
+  ensName            String?  @unique @map("ens_name")
   contractAddresses  Json?    @map("contract_addresses") // {organizationRegistry, privacyPool, stateChannel}
+  
   metadata           Json?
   createdAt          DateTime @default(now()) @map("created_at")
   updatedAt          DateTime @updatedAt @map("updated_at")
@@ -37,10 +67,14 @@ model Organization {
   employees          Employee[]
   authKeys           AuthKey[]
   transactions       Transaction[]
+  externalApprovals  ExternalTransactionApproval[]
+  payrollRuns        PayrollRun[]
   merkleTree         MerkleTree?
+  auditLogs          AuditLog[]
 
   @@index([kycStatus, createdAt])
   @@index([organizationId])
+  @@index([adminEmail])
   @@map("organizations")
 }
 
@@ -55,6 +89,26 @@ enum SubscriptionTier {
   STARTER
   BUSINESS
   ENTERPRISE
+}
+
+enum SubscriptionStatus {
+  TRIAL
+  ACTIVE
+  PAST_DUE
+  CANCELLED
+  EXPIRED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAYMENT_RECEIVED
+  PAID
+  FAILED
+}
+
+enum BillingCycle {
+  MONTHLY
+  ANNUAL
 }
 
 // ============================================================================
@@ -237,4 +291,111 @@ enum ChannelStatus {
   SETTLING
   CLOSED
   DISPUTED
+}
+
+// ============================================================================
+// EXTERNAL TRANSACTION APPROVAL MODEL
+// ============================================================================
+
+model ExternalTransactionApproval {
+  id                 String   @id @default(cuid())
+  approvalId         String   @unique @map("approval_id")
+  organizationId     String   @map("organization_id")
+  employeeId         String   @map("employee_id")
+  toAddress          String   @map("to_address")
+  amount             String
+  currency           String
+  chain              String
+  memo               String?
+  status             ApprovalStatus @default(PENDING)
+  requestedAt        DateTime @default(now()) @map("requested_at")
+  reviewedAt         DateTime? @map("reviewed_at")
+  reviewedBy         String?  @map("reviewed_by") // Admin wallet address
+  rejectionReason    String?  @map("rejection_reason")
+  transactionId      String?  @map("transaction_id") // Link to final transaction if approved
+  metadata           Json?
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  organization       Organization @relation(fields: [organizationId], references: [organizationId], onDelete: Cascade)
+
+  @@index([organizationId, status])
+  @@index([employeeId, status])
+  @@index([status, requestedAt(sort: Desc)])
+  @@map("external_transaction_approvals")
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  EXPIRED
+  CANCELLED
+}
+
+// ============================================================================
+// PAYROLL RUN MODEL
+// ============================================================================
+
+model PayrollRun {
+  id                 String   @id @default(cuid())
+  payrollId          String   @unique @map("payroll_id")
+  organizationId     String   @map("organization_id")
+  initiatedBy        String   @map("initiated_by") // Admin wallet address
+  totalAmount        String   @map("total_amount")
+  currency           String
+  chain              String
+  employeeCount      Int      @map("employee_count")
+  payrollData        Json     @map("payroll_data") // Array of {employeeId, amount, status}
+  blockchainTxHash   String?  @map("blockchain_tx_hash")
+  status             PayrollStatus @default(PENDING)
+  scheduledFor       DateTime? @map("scheduled_for")
+  executedAt         DateTime? @map("executed_at")
+  gasUsed            String?  @map("gas_used")
+  metadata           Json?
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  organization       Organization @relation(fields: [organizationId], references: [organizationId], onDelete: Cascade)
+
+  @@index([organizationId, createdAt(sort: Desc)])
+  @@index([status])
+  @@map("payroll_runs")
+}
+
+enum PayrollStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  PARTIALLY_COMPLETED
+}
+
+// ============================================================================
+// AUDIT LOG MODEL
+// ============================================================================
+
+model AuditLog {
+  id                 String   @id @default(cuid())
+  logId              String   @unique @map("log_id")
+  organizationId     String   @map("organization_id")
+  eventType          String   @map("event_type") // external_transaction_approved, payroll_executed, employee_added, etc.
+  actorId            String   @map("actor_id") // Wallet address or employee ID
+  affectedEntityType String   @map("affected_entity_type") // employee, transaction, organization
+  affectedEntityId   String   @map("affected_entity_id")
+  encryptedDetails   String?  @map("encrypted_details")
+  ipAddress          String?  @map("ip_address")
+  userAgent          String?  @map("user_agent")
+  metadata           Json?
+  createdAt          DateTime @default(now()) @map("created_at")
+
+  // Relations
+  organization       Organization @relation(fields: [organizationId], references: [organizationId], onDelete: Cascade)
+
+  @@index([organizationId, createdAt(sort: Desc)])
+  @@index([eventType])
+  @@index([actorId])
+  @@map("audit_logs")
 }
