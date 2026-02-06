@@ -1,9 +1,9 @@
 import { HardhatUserConfig } from "hardhat/config";
 import "@nomicfoundation/hardhat-toolbox";
 import "@nomicfoundation/hardhat-ethers";
-import * as dotenv from "dotenv";
+import { config as dotenvConfig } from "dotenv";
 
-dotenv.config();
+dotenvConfig({ path: "./backend/.env" });
 
 const config: HardhatUserConfig = {
   solidity: {
@@ -75,7 +75,7 @@ const config: HardhatUserConfig = {
     ]
   },
   paths: {
-    sources: "./contracts",
+    sources: "./backend/contracts",
     tests: "./test",
     cache: "./cache",
     artifacts: "./artifacts"

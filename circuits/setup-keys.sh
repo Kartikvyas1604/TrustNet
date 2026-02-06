@@ -101,6 +101,9 @@ snarkjs zkey export solidityverifier \
   ../../keys/transaction_membership/circuit_final.zkey \
   ../../keys/transaction_membership/TransactionMembershipVerifier.sol
 
+# Rename contract from Groth16Verifier to TransactionMembershipVerifier
+sed -i '' 's/contract Groth16Verifier {/contract TransactionMembershipVerifier {/' ../../keys/transaction_membership/TransactionMembershipVerifier.sol
+
 echo "✅ Transaction Membership setup complete"
 
 cd ../..
@@ -143,6 +146,9 @@ echo "Generating Solidity verifier contract..."
 snarkjs zkey export solidityverifier \
   ../../keys/amount_commitment/circuit_final.zkey \
   ../../keys/amount_commitment/AmountCommitmentVerifier.sol
+
+# Rename contract from Groth16Verifier to AmountCommitmentVerifier
+sed -i '' 's/contract Groth16Verifier {/contract AmountCommitmentVerifier {/' ../../keys/amount_commitment/AmountCommitmentVerifier.sol
 
 echo "✅ Amount Commitment setup complete"
 

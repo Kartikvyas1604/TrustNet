@@ -1,24 +1,39 @@
-# TypeScript Configuration for Deployment Scripts
-
-This tsconfig is specifically for deployment scripts that use Hardhat.
-
 {
-  "extends": "./backend/tsconfig.json",
+  "ts-node": {
+    "transpileOnly": true,
+    "files": true,
+    "compilerOptions": {
+      "target": "ES2020",
+      "module": "commonjs",
+      "esModuleInterop": true,
+      "skipLibCheck": true,
+      "resolveJsonModule": true,
+      "moduleResolution": "node"
+    }
+  },
   "compilerOptions": {
-    "rootDir": ".",
+    "target": "ES2020",
+    "module": "commonjs",
+    "lib": ["ES2020"],
     "outDir": "./dist",
-    "resolveJsonModule": true,
+    "rootDir": ".",
+    "strict": true,
     "esModuleInterop": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "moduleResolution": "node",
+    "declaration": true,
+    "sourceMap": true
   },
   "include": [
     "hardhat.config.ts",
-    "backend/scripts/**/*.ts",
-    "scripts/**/*.ts"
+    "backend/scripts/**/*.ts"
   ],
   "exclude": [
     "node_modules",
     "backend/src",
-    "backend/dist"
+    "backend/dist",
+    "src"
   ]
 }

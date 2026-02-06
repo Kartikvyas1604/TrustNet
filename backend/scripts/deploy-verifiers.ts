@@ -42,6 +42,12 @@ async function main() {
   fs.copyFileSync(amountVerifierPath, path.join(contractsDir, "AmountCommitmentVerifier.sol"));
   console.log("✅ Verifier contracts copied to backend/contracts/\n");
 
+  // Compile contracts
+  console.log("🔨 Compiling contracts...");
+  await run("clean");
+  await run("compile");
+  console.log("✅ Contracts compiled\n");
+
   // Deploy Transaction Membership Verifier
   console.log("📦 Deploying Transaction Membership Verifier...");
   const MembershipVerifierFactory = await ethers.getContractFactory("TransactionMembershipVerifier");

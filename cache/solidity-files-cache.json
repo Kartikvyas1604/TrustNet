@@ -1,0 +1,79 @@
+{
+  "_format": "hh-sol-cache-2",
+  "files": {
+    "/Users/0xkartikvyas/Projects/trustnet/backend/contracts/AmountCommitmentVerifier.sol": {
+      "lastModificationDate": 1770382012231,
+      "contentHash": "053daed43393e29b8b9ee292c78468f3",
+      "sourceName": "backend/contracts/AmountCommitmentVerifier.sol",
+      "solcConfig": {
+        "version": "0.8.24",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "viaIR": true,
+          "evmVersion": "paris",
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        ">=0.7.0 <0.9.0"
+      ],
+      "artifacts": [
+        "AmountCommitmentVerifier"
+      ]
+    },
+    "/Users/0xkartikvyas/Projects/trustnet/backend/contracts/TransactionMembershipVerifier.sol": {
+      "lastModificationDate": 1770382012231,
+      "contentHash": "83d985ba63031c71b429f8f7c0ecbd6f",
+      "sourceName": "backend/contracts/TransactionMembershipVerifier.sol",
+      "solcConfig": {
+        "version": "0.8.24",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "viaIR": true,
+          "evmVersion": "paris",
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        ">=0.7.0 <0.9.0"
+      ],
+      "artifacts": [
+        "TransactionMembershipVerifier"
+      ]
+    }
+  }
+}
