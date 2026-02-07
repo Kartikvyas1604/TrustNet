@@ -4,7 +4,7 @@ import React, { useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Upload, FileText, CheckCircle, XCircle, Loader2, AlertCircle } from 'lucide-react'
+import { Upload, FileText, CheckCircle, XCircle, Loader2, AlertCircle, Shield } from 'lucide-react'
 
 interface UploadedFile {
   file: File
@@ -103,7 +103,6 @@ export default function DocumentUploadPage() {
 
       if (data.success) {
         // Documents uploaded successfully, proceed to payment
-        alert('Documents uploaded successfully! Please proceed to payment.')
         router.push(`/organization/payment?orgId=${organizationId}`)
       } else {
         setError(data.error || 'Upload failed')
@@ -124,14 +123,14 @@ export default function DocumentUploadPage() {
     const fileData = files[field as keyof typeof files]
 
     return (
-      <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 hover:border-blue-500 transition-colors">
+      <div className="border border-dashed border-vault-slate/20 rounded-lg p-6 hover:border-vault-green/50 transition-colors bg-vault-dark/50">
         <div className="flex items-start justify-between mb-3">
           <div>
-            <h3 className="font-semibold text-gray-900">
+            <h3 className="font-semibold text-white">
               {label}
-              {required && <span className="text-red-500 ml-1">*</span>}
+              {required && <span className="text-red-400 ml-1">*</span>}
             </h3>
-            <p className="text-sm text-gray-500 mt-1">
+            <p className="text-sm text-vault-slate mt-1">
               PDF, JPG, or PNG (max 5MB)
             </p>
           </div>
@@ -150,28 +149,32 @@ export default function DocumentUploadPage() {
               id={`file-${field}`}
             />
             <label htmlFor={`file-${field}`}>
-              <div className="flex flex-col items-center cursor-pointer">
-                <Upload className="w-8 h-8 text-gray-400 mb-2" />
-                <span className="text-sm font-medium text-blue-600 hover:text-blue-700">
-                  Click to upload
+              <div className="flex flex-col items-center cursor-pointer py-4">
+                <div className="w-12 h-12 rounded-full bg-vault-green/10 flex items-center justify-center mb-3">
+                  <Upload className="w-6 h-6 text-vault-green" />
+                </div>
+                <span className="text-sm font-medium text-vault-green hover:text-vault-green/80">
+                  Click to upload document
                 </span>
               </div>
             </label>
           </div>
         ) : (
-          <div className="flex items-center justify-between bg-gray-50 rounded p-3">
+          <div className="flex items-center justify-between bg-vault-dark rounded p-3 border border-vault-slate/10">
             <div className="flex items-center gap-3 flex-1 min-w-0">
-              <FileText className="w-5 h-5 text-blue-600 flex-shrink-0" />
+              <div className="w-10 h-10 rounded bg-blue-500/10 flex items-center justify-center flex-shrink-0">
+                <FileText className="w-5 h-5 text-blue-400" />
+              </div>
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium truncate">{fileData.file.name}</p>
-                <p className="text-xs text-gray-500">
+                <p className="text-sm font-medium text-white truncate">{fileData.file.name}</p>
+                <p className="text-xs text-vault-slate">
                   {(fileData.file.size / 1024).toFixed(1)} KB
                 </p>
               </div>
               {fileData.uploaded ? (
-                <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
+                <CheckCircle className="w-5 h-5 text-vault-green flex-shrink-0" />
               ) : fileData.uploading ? (
-                <Loader2 className="w-5 h-5 text-blue-500 animate-spin flex-shrink-0" />
+                <Loader2 className="w-5 h-5 text-blue-400 animate-spin flex-shrink-0" />
               ) : null}
             </div>
             <Button
@@ -184,7 +187,7 @@ export default function DocumentUploadPage() {
                   return newFiles
                 })
               }}
-              className="ml-2"
+              className="ml-2 text-vault-slate hover:text-red-400 hover:bg-red-500/10"
             >
               <XCircle className="w-4 h-4" />
             </Button>
@@ -192,12 +195,14 @@ export default function DocumentUploadPage() {
         )}
 
         {fileData?.preview && (
-          <div className="mt-3">
-            <img
-              src={fileData.preview}
-              alt="Preview"
-              className="max-w-full h-32 object-contain rounded border"
-            />
+          <div className="mt-4">
+            <div className="relative aspect-video w-full rounded-lg overflow-hidden border border-vault-slate/20 bg-vault-dark">
+              <img
+                src={fileData.preview}
+                alt="Preview"
+                className="w-full h-full object-contain"
+              />
+            </div>
           </div>
         )}
       </div>
@@ -205,100 +210,65 @@ export default function DocumentUploadPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-100 p-4">
-      <div className="max-w-4xl mx-auto py-8">
-        <Card className="p-8">
-          {/* Header */}
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold mb-2">Upload KYC Documents</h1>
-            <p className="text-gray-600">
-              Please upload the required documents for verification. All documents will be reviewed by our admin team.
-            </p>
-          </div>
+    <div className="min-h-screen bg-gradient-to-br from-vault-dark via-vault-dark/95 to-vault-dark/90 py-12 px-4">
+      <div className="max-w-4xl mx-auto">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-white mb-2">Upload KYC Documents</h1>
+          <p className="text-vault-slate">
+            Please provide the following documents to verify your organization identity.
+          </p>
+        </div>
 
-          {/* Important Notice */}
-          <div className="mb-8 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-            <div className="flex gap-2">
-              <AlertCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-              <div className="text-sm text-blue-800">
-                <p className="font-semibold mb-1">Document Requirements:</p>
-                <ul className="list-disc list-inside space-y-1">
-                  <li>All documents must be clear and readable</li>
-                  <li>Documents must be recent (issued within last 6 months)</li>
-                  <li>Accepted formats: PDF, JPG, PNG (max 5MB each)</li>
-                  <li>Business Certificate is mandatory</li>
-                </ul>
-              </div>
+        {error && (
+          <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-lg flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+            <p className="text-sm text-red-400">{error}</p>
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          {renderFileUpload('businessCertificate', 'Business Registration Certificate', true)}
+          {renderFileUpload('proofOfAddress', 'Proof of Business Address')}
+          {renderFileUpload('adminId', 'Admin Government ID')}
+          {renderFileUpload('taxDocument', 'Tax Registration Document')}
+        </div>
+
+        <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4 mb-8">
+          <div className="flex gap-3">
+            <Shield className="w-5 h-5 text-blue-400 flex-shrink-0" />
+            <div>
+              <h4 className="font-semibold text-blue-400 text-sm mb-1">Data Privacy & Security</h4>
+              <p className="text-sm text-vault-slate">
+                Your documents are encrypted and stored securely. They are only accessible by our 
+                compliance team for verification purposes.
+              </p>
             </div>
           </div>
+        </div>
 
-          {/* File Upload Sections */}
-          <div className="space-y-6 mb-8">
-            {renderFileUpload(
-              'businessCertificate',
-              'Business Registration Certificate',
-              true
+        <div className="flex justify-end gap-4">
+          <Button
+            variant="outline"
+            onClick={() => router.back()}
+            className="border-vault-slate/20 text-white hover:bg-vault-slate/10"
+          >
+            Back
+          </Button>
+          <Button
+            onClick={handleUpload}
+            disabled={uploading || !files.businessCertificate}
+            className="bg-vault-green text-vault-dark hover:bg-vault-green/90 min-w-[150px]"
+          >
+            {uploading ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Uploading...
+              </>
+            ) : (
+              'Submit Documents'
             )}
-            {renderFileUpload(
-              'proofOfAddress',
-              'Proof of Business Address',
-              false
-            )}
-            {renderFileUpload(
-              'adminId',
-              'Admin ID Document',
-              false
-            )}
-            {renderFileUpload(
-              'taxDocument',
-              'Tax Registration Document',
-              false
-            )}
-          </div>
-
-          {/* Error Message */}
-          {error && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-sm text-red-800">
-              {error}
-            </div>
-          )}
-
-          {/* Action Buttons */}
-          <div className="flex gap-4">
-            <Button
-              onClick={handleUpload}
-              disabled={uploading || ! files.businessCertificate}
-              className="flex-1"
-            >
-              {uploading ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Uploading...
-                </>
-              ) : (
-                'Upload Documents & Continue to Payment'
-              )}
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => router.back()}
-              disabled={uploading}
-            >
-              Back
-            </Button>
-          </div>
-
-          {/* Next Steps Info */}
-          <div className="mt-8 p-4 bg-gray-50 rounded-lg text-sm text-gray-600">
-            <p className="font-semibold mb-2">What happens next?</p>
-            <ol className="list-decimal list-inside space-y-1">
-              <li>Upload your documents</li>
-              <li>Complete payment (0.005 ETH on Base Sepolia)</li>
-              <li>Admin will review your documents</li>
-              <li>Once approved, your organization will be activated</li>
-            </ol>
-          </div>
-        </Card>
+          </Button>
+        </div>
       </div>
     </div>
   )

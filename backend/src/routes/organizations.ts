@@ -69,6 +69,42 @@ router.get('/:id', async (req: Request, res: Response) => {
 });
 
 /**
+ * GET /api/organization/status/:id
+ * Get organization status for approval check
+ */
+router.get('/status/:id', async (req: Request, res: Response) => {
+  try {
+    const organization = await OrganizationService.getOrganization(req.params.id);
+
+    if (!organization) {
+      return res.status(404).json({
+        success: false,
+        error: 'Organization not found',
+      });
+    }
+
+    res.json({
+      success: true,
+      organization: {
+        organizationId: organization.organizationId,
+        name: organization.name,
+        kycStatus: organization.kycStatus,
+        subscriptionTier: organization.subscriptionTier,
+        subscriptionStatus: organization.subscriptionStatus,
+        paymentStatus: organization.paymentStatus,
+        verifiedAt: organization.verifiedAt,
+        createdAt: organization.createdAt,
+      },
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+});
+
+/**
  * POST /api/organizations/:id/generate-keys
  * Generate auth keys for organization
  */

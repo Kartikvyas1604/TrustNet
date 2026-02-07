@@ -26,6 +26,11 @@ export default function OrganizationCompletePage() {
       const data = await response.json()
       if (data.success) {
         setOrgData(data.payment)
+        
+        // After showing the complete page briefly, redirect to pending
+        setTimeout(() => {
+          router.push('/organization/pending')
+        }, 3000)
       }
     } catch (error) {
       console.error('Error fetching status:', error)
@@ -143,7 +148,7 @@ export default function OrganizationCompletePage() {
         {/* Actions */}
         <div className="flex gap-4">
           <Button
-            onClick={() => router.push('/organization/register/pending')}
+            onClick={() => router.push('/organization/pending')}
             className="flex-1"
           >
             View Status

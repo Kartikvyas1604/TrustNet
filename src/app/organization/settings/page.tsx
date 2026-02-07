@@ -46,6 +46,12 @@ export default function OrganizationSettingsPage() {
       const data = await response.json()
 
       if (data.success) {
+        // Check if organization is approved
+        if (data.organization.kycStatus !== 'APPROVED') {
+          router.push('/organization/pending')
+          return
+        }
+        
         setOrgData(data.organization)
       }
     } catch (error) {

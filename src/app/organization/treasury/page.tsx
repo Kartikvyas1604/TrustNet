@@ -52,8 +52,27 @@ export default function OrganizationTreasuryPage() {
       return
     }
     setOrganizationId(orgId)
-    loadTreasuryData(orgId)
+    checkStatusAndLoadData(orgId)
   }, [router])
+
+  const checkStatusAndLoadData = async (orgId: string) => {
+    try {
+      // Check organization status first
+      const statusResponse = await fetch(`/api/organization/status/${orgId}`)
+      const statusData = await statusResponse.json()
+
+      if (statusData.success && statusData.organization.kycStatus !== 'APPROVED') {
+        router.push('/organization/pending')
+        return
+      }
+
+      // Load treasury data
+      await loadTreasuryData(orgId)
+    } catch (error) {
+      console.error('Failed to load treasury data:', error)
+      setLoading(false)
+    }
+  }
 
   const loadTreasuryData = async (orgId: string) => {
     try {

@@ -46,8 +46,27 @@ export default function OrganizationAuthKeysPage() {
       return
     }
     setOrganizationId(orgId)
-    loadAuthKeys(orgId)
+    checkStatusAndLoadKeys(orgId)
   }, [router])
+
+  const checkStatusAndLoadKeys = async (orgId: string) => {
+    try {
+      // Check organization status first
+      const statusResponse = await fetch(`/api/organization/status/${orgId}`)
+      const statusData = await statusResponse.json()
+
+      if (statusData.success && statusData.organization.kycStatus !== 'APPROVED') {
+        router.push('/organization/pending')
+        return
+      }
+
+      // Load auth keys
+      await loadAuthKeys(orgId)
+    } catch (error) {
+      console.error('Failed to load auth keys:', error)
+      setLoading(false)
+    }
+  }
 
   const loadAuthKeys = async (orgId: string) => {
     try {

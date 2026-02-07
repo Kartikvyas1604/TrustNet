@@ -627,19 +627,27 @@ router.get('/status/:id', async (req: Request, res: Response) => {
 
     res.json({
       success: true,
-      data: {
-        organization: {
-          id: organization.organizationId,
-          name: organization.name,
-          email: organization.adminEmail,
-          kycStatus: organization.kycStatus,
-          paymentStatus: organization.paymentStatus,
-          subscriptionStatus: organization.subscriptionStatus,
-          employeeLimit: organization.employeeLimit,
-          employeeCount: organization._count.employees,
-          ensName: organization.ensName,
-        },
-        status,
+      organization: {
+        organizationId: organization.organizationId,
+        name: organization.name,
+        adminEmail: organization.adminEmail,
+        kycStatus: organization.kycStatus,
+        paymentStatus: organization.paymentStatus,
+        subscriptionStatus: organization.subscriptionStatus,
+        subscriptionTier: organization.subscriptionTier,
+        employeeLimit: organization.employeeLimit,
+        employeeCount: organization._count.employees,
+        ensName: organization.ensName,
+        verifiedAt: organization.verifiedAt,
+        createdAt: organization.createdAt,
+      },
+      status: {
+        registrationComplete: !!organization.name,
+        paymentReceived: organization.paymentStatus === 'PAYMENT_RECEIVED' || organization.paymentStatus === 'PAID',
+        documentsUploaded: !!organization.kycDocuments,
+        walletConnected: Array.isArray(organization.adminWallets) && organization.adminWallets.length > 0,
+        verificationStatus: organization.kycStatus,
+        approved: organization.kycStatus === 'APPROVED',
       },
     });
   } catch (error: any) {

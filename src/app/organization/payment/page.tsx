@@ -4,9 +4,8 @@ import React, { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { CheckCircle, Loader2, Copy, ExternalLink, AlertCircle } from 'lucide-react'
-import { QRCodeSVG } from 'qrcode.react'
+import { CheckCircle, Loader2, Wallet as WalletIcon, AlertCircle, Shield, Info } from 'lucide-react'
+import { walletService, WalletState } from '@/lib/wallet'
 
 export default function PaymentPage() {
   const router = useRouter()
@@ -14,14 +13,43 @@ export default function PaymentPage() {
   const organizationId = searchParams.get('orgId')
 
   const [paymentConfig, setPaymentConfig] = useState<any>(null)
-  const [txHash, setTxHash] = useState('')
-  const [verifying, setVerifying] = useState(false)
-  const [verified, setVerified] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [walletState, setWalletState] = useState<WalletState>({
+    address: null,
+    chainId: null,
+    connected: false,
+  })
+  const [employeeCount, setEmployeeCount] = useState(10)
+  const [paying, setPaying] = useState(false)
+  const [paid, setPaid] = useState(false)
   const [error, setError] = useState('')
-  const [copied, setCopied] = useState(false)
+  const [txHash, setTxHash] = useState('')
+
+  // Calculate amount: 0.005 ETH per 10 employees
+  const calculateAmount = (count: number): string => {
+    const groups = Math.ceil(count / 10)
+    return (groups * 0.005).toFixed(4)
+  }
 
   useEffect(() => {
     fetchPaymentConfig()
+    
+    // Setup wallet listeners
+    walletService.onAccountsChanged((accounts) => {
+      if (accounts.length === 0) {
+        setWalletState({ address: null, chainId: null, connected: false })
+      } else {
+        setWalletState(prev => ({ ...prev, address: accounts[0] }))
+      }
+    })
+
+    walletService.onChainChanged((chainId) => {
+      setWalletState(prev => ({ ...prev, chainId: parseInt(chainId, 16) }))
+    })
+
+    return () => {
+      walletService.removeListeners()
+    }
   }, [])
 
   const fetchPaymentConfig = async () => {
@@ -33,215 +61,260 @@ export default function PaymentPage() {
       }
     } catch (error) {
       console.error('Error fetching payment config:', error)
+    } finally {
+      setLoading(false)
     }
   }
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
+  const handleConnectWallet = async () => {
+    try {
+      setError('')
+      const state = await walletService.connectWallet()
+      setWalletState(state)
+
+      // Check if on correct network
+      if (state.chainId !== 84532) {
+        await walletService.switchToBaseSepolia()
+        const newState = await walletService.connectWallet()
+        setWalletState(newState)
+      }
+    } catch (err: any) {
+      setError(err.message)
+    }
   }
 
-  const handleVerifyPayment = async () => {
-    if (!txHash) {
-      setError('Please enter transaction hash')
-      return
-    }
-
-    if (!organizationId) {
-      setError('Organization ID not found')
+  const handlePayment = async () => {
+    if (!walletState.connected || !paymentConfig || !organizationId) {
       return
     }
 
     try {
-      setVerifying(true)
+      setPaying(true)
       setError('')
 
-      const response = await fetch('http://localhost:5001/api/payment/verify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          organizationId,
-          txHash: txHash.trim(),
-        }),
-      })
+      const amount = calculateAmount(employeeCount)
+      
+      // Send payment
+      const result = await walletService.sendPayment(
+        paymentConfig.treasuryAddress,
+        amount
+      )
 
-      const data = await response.json()
+      if (result.status === 'success') {
+        setTxHash(result.txHash)
+        
+        // Verify payment with backend
+        const response = await fetch('http://localhost:5001/api/payment/verify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            organizationId,
+            txHash: result.txHash,
+          }),
+        })
 
-      if (data.success) {
-        setVerified(true)
-        setTimeout(() => {
-          router.push(`/organization/complete?orgId=${organizationId}`)
-        }, 2000)
-      } else {
-        setError(data.error || 'Payment verification failed')
+        const data = await response.json()
+
+        if (data.success) {
+          setPaid(true)
+          setTimeout(() => {
+            router.push(`/organization/complete?orgId=${organizationId}`)
+          }, 2000)
+        } else {
+          setError('Payment verification failed. Please contact support with transaction hash.')
+        }
       }
-    } catch (error: any) {
-      console.error('Verification error:', error)
-      setError('Failed to verify payment. Please try again.')
+    } catch (err: any) {
+      setError(err.message || 'Payment failed')
     } finally {
-      setVerifying(false)
+      setPaying(false)
     }
   }
 
-  if (!paymentConfig) {
+  if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-100 flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+      <div className="min-h-screen bg-gradient-to-br from-vault-dark via-vault-dark/95 to-vault-dark/90 flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-vault-green" />
       </div>
     )
   }
 
-  if (verified) {
+  if (paid) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-100 flex items-center justify-center p-4">
-        <Card className="max-w-md w-full p-8 text-center">
-          <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold mb-2">Payment Verified!</h2>
-          <p className="text-gray-600 mb-4">
+      <div className="min-h-screen bg-gradient-to-br from-vault-dark via-vault-dark/95 to-vault-dark/90 flex items-center justify-center p-4">
+        <Card className="max-w-md w-full p-8 text-center bg-vault-darker border-vault-slate/20">
+          <div className="w-20 h-20 rounded-full bg-vault-green/10 flex items-center justify-center mx-auto mb-6">
+            <CheckCircle className="w-10 h-10 text-vault-green" />
+          </div>
+          <h2 className="text-2xl font-bold mb-3 text-white">Payment Successful!</h2>
+          <p className="text-vault-slate mb-4">
             Your subscription has been activated successfully.
           </p>
-          <p className="text-sm text-gray-500">
+          {txHash && (
+            <div className="text-xs text-vault-slate/70 mb-6 break-all font-mono bg-vault-dark p-3 rounded">
+              {txHash}
+            </div>
+          )}
+          <div className="flex items-center justify-center gap-2 text-sm text-vault-slate/70">
+            <Loader2 className="w-4 h-4 animate-spin" />
             Redirecting to setup...
-          </p>
+          </div>
         </Card>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-100 p-4">
-      <div className="max-w-4xl mx-auto py-8">
-        <Card className="p-8">
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold mb-2">Complete Payment</h1>
-            <p className="text-gray-600">
-              Send exactly {paymentConfig.requiredAmount} ETH to activate your subscription
-            </p>
-          </div>
+    <div className="min-h-screen bg-gradient-to-br from-vault-dark via-vault-dark/95 to-vault-dark/90 py-12 px-4">
+      <div className="max-w-4xl mx-auto">
+        <div className="mb-8 text-center">
+          <h1 className="text-3xl font-bold text-white mb-2">Complete Payment</h1>
+          <p className="text-vault-slate">
+            Connect your wallet and pay to activate your TrustNet subscription
+          </p>
+        </div>
 
-          <div className="grid md:grid-cols-2 gap-8 mb-8">
-            {/* QR Code Section */}
-            <div className="flex flex-col items-center">
-              <div className="bg-white p-6 rounded-lg shadow-lg mb-4">
-                <QRCodeSVG
-                  value={`ethereum:${paymentConfig.treasuryAddress}?value=${parseFloat(paymentConfig.requiredAmount) * 1e18}`}
-                  size={200}
-                  level="H"
-                  includeMargin={true}
-                />
-              </div>
-              <p className="text-sm text-gray-600 text-center">
-                Scan with your wallet app
-              </p>
+        {/* Pricing Calculator */}
+        <Card className="p-8 bg-vault-darker border-vault-slate/20 mb-6">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center">
+              <Info className="w-5 h-5 text-blue-400" />
             </div>
-
-            {/* Payment Details  */}
-            <div className="space-y-4">
-              <div>
-                <label className="text-sm font-semibold text-gray-700">Network</label>
-                <div className="mt-1 p-3 bg-blue-50 rounded-lg font-mono text-sm">
-                  {paymentConfig.network} (Chain ID: {paymentConfig.chainId})
-                </div>
-              </div>
-
-              <div>
-                <label className="text-sm font-semibold text-gray-700">Treasury Address</label>
-                <div className="mt-1 p-3 bg-gray-50 rounded-lg flex items-center justify-between">
-                  <span className="font-mono text-sm truncate mr-2">
-                    {paymentConfig.treasuryAddress}
-                  </span>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => copyToClipboard(paymentConfig.treasuryAddress)}
-                  >
-                    {copied ? <CheckCircle className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
-                  </Button>
-                </div>
-              </div>
-
-              <div>
-                <label className="text-sm font-semibold text-gray-700">Amount</label>
-                <div className="mt-1 p-3 bg-green-50 rounded-lg font-semibold text-lg">
-                  {paymentConfig.requiredAmount} {paymentConfig.currency}
-                </div>
-              </div>
-
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                <div className="flex gap-2">
-                  <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
-                  <div className="text-sm text-yellow-800">
-                    <p className="font-semibold mb-1">Important:</p>
-                    <ul className="list-disc list-inside space-y-1">
-                      <li>Send exactly {paymentConfig.requiredAmount} ETH</li>
-                      <li>Use Base Sepolia network</li>
-                      <li>Wait for transaction confirmation</li>
-                      <li>Enter transaction hash below</li>
-                    </ul>
-                  </div>
-                </div>
-              </div>
+            <div>
+              <h3 className="text-lg font-semibold text-white">Subscription Pricing</h3>
+              <p className="text-sm text-vault-slate">Pay 0.005 ETH per 10 employees</p>
             </div>
           </div>
 
-          {/* Transaction Hash Input */}
-          <div className="border-t pt-8">
-            <h3 className="text-lg font-semibold mb-4">Verify Your Payment</h3>
-            <p className="text-sm text-gray-600 mb-4">
-              After sending the payment, enter your transaction hash to verify and activate your subscription.
-            </p>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium text-vault-slate mb-2 block">
+                Number of Employees
+              </label>
+              <input
+                type="number"
+                value={employeeCount}
+                onChange={(e) => setEmployeeCount(Math.max(1, parseInt(e.target.value) || 1))}
+                min="1"
+                step="1"
+                className="w-full px-4 py-3 bg-vault-dark border border-vault-slate/20 rounded-lg text-white focus:outline-none focus:border-vault-green/50"
+              />
+            </div>
 
-            <div className="space-y-4">
+            <div className="flex items-center justify-between p-4 bg-vault-dark rounded-lg border border-vault-slate/10">
+              <span className="text-vault-slate">Total Amount</span>
+              <span className="text-2xl font-bold text-vault-green">
+                {calculateAmount(employeeCount)} ETH
+              </span>
+            </div>
+
+            <div className="text-xs text-vault-slate/70 space-y-1">
+              <p>• Groups of 10: {Math.ceil(employeeCount / 10)}</p>
+              <p>• Rate: 0.005 ETH per 10 employees</p>
+              <p>• Network: Base Sepolia Testnet</p>
+            </div>
+          </div>
+        </Card>
+
+        {/* Wallet Connection */}
+        {!walletState.connected ? (
+          <Card className="p-8 bg-vault-darker border-vault-slate/20">
+            <div className="text-center space-y-6">
+              <div className="w-16 h-16 rounded-full bg-vault-green/10 flex items-center justify-center mx-auto">
+                <WalletIcon className="w-8 h-8 text-vault-green" />
+              </div>
               <div>
-                <label className="text-sm font-semibold text-gray-700">Transaction Hash</label>
-                <Input
-                  type="text"
-                  placeholder="0x..."
-                  value={txHash}
-                  onChange={(e) => setTxHash(e.target.value)}
-                  className="mt-1"
-                />
+                <h3 className="text-xl font-semibold text-white mb-2">Connect Your Wallet</h3>
+                <p className="text-vault-slate mb-6">
+                  You need to connect your wallet to proceed with the payment
+                </p>
               </div>
 
               {error && (
-                <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-sm text-red-800">
+                <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg flex items-center gap-2 text-sm text-red-400">
+                  <AlertCircle className="w-4 h-4" />
                   {error}
                 </div>
               )}
 
-              <div className="flex gap-4">
-                <Button
-                  onClick={handleVerifyPayment}
-                  disabled={verifying || !txHash}
-                  className="flex-1"
-                >
-                  {verifying ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Verifying...
-                    </>
-                  ) : (
-                    'Verify Payment'
-                  )}
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => window.open(`https://sepolia.basescan.org/address/${paymentConfig.treasuryAddress}`, '_blank')}
-                >
-                  <ExternalLink className="w-4 h-4 mr-2" />
-                  View on Explorer
-                </Button>
+              <Button
+                onClick={handleConnectWallet}
+                className="bg-vault-green text-vault-dark hover:bg-vault-green/90 font-semibold px-8 py-6 text-lg"
+              >
+                <WalletIcon className="w-5 h-5 mr-2" />
+                Connect Wallet
+              </Button>
+
+              <div className="text-xs text-vault-slate/70">
+                Make sure you have MetaMask or a compatible wallet installed
               </div>
             </div>
-          </div>
+          </Card>
+        ) : (
+          <Card className="p-8 bg-vault-darker border-vault-slate/20">
+            <div className="space-y-6">
+              {/* Wallet Info */}
+              <div className="flex items-center justify-between p-4 bg-vault-dark rounded-lg border border-vault-slate/10">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-vault-green/10 flex items-center justify-center">
+                    <WalletIcon className="w-5 h-5 text-vault-green" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-vault-slate">Connected Wallet</p>
+                    <p className="font-mono text-sm text-white">
+                      {walletState.address?.slice(0, 6)}...{walletState.address?.slice(-4)}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-vault-green animate-pulse"></div>
+                  <span className="text-xs text-vault-green">Connected</span>
+                </div>
+              </div>
 
-          {/* Help Section */}
-          <div className="mt-8 p-4 bg-gray-50 rounded-lg text-sm text-gray-600">
-            <p className="font-semibold mb-2">Need help?</p>
-            <p>If you encounter any issues with the payment, please contact our support team.</p>
-          </div>
-        </Card>
+              {/* Network Warning */}
+              {walletState.chainId !== 84532 && (
+                <div className="p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-lg flex items-center gap-3">
+                  <AlertCircle className="w-5 h-5 text-yellow-500" />
+                  <div>
+                    <p className="text-sm font-semibold text-yellow-500">Wrong Network</p>
+                    <p className="text-xs text-yellow-500/80">Please switch to Base Sepolia</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Payment Button */}
+              {error && (
+                <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg flex items-center gap-2 text-sm text-red-400">
+                  <AlertCircle className="w-4 h-4" />
+                  {error}
+                </div>
+              )}
+
+              <Button
+                onClick={handlePayment}
+                disabled={paying || walletState.chainId !== 84532}
+                className="w-full bg-vault-green text-vault-dark hover:bg-vault-green/90 font-semibold py-6 text-lg"
+              >
+                {paying ? (
+                  <>
+                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                    Processing Payment...
+                  </>
+                ) : (
+                  <>
+                    <Shield className="w-5 h-5 mr-2" />
+                    Pay {calculateAmount(employeeCount)} ETH
+                  </>
+                )}
+              </Button>
+
+              <div className="text-xs text-center text-vault-slate/70">
+                Your transaction is secured by blockchain technology
+              </div>
+            </div>
+          </Card>
+        )}
       </div>
     </div>
   )

@@ -233,4 +233,71 @@ router.get(
   }
 );
 
+/**
+ * @route   POST /api/auth/organization/verify
+ * @desc    Verify organization by email and wallet address
+ * @access  Public
+ */
+router.post('/organization/verify', async (req: Request, res: Response) => {
+  try {
+    const { email, walletAddress } = req.body;
+
+    if (!email || !walletAddress) {
+      return res.status(400).json({
+        success: false,
+        error: 'Email and wallet address are required',
+      });
+    }
+
+    // Find organization by admin email
+    const organization = await prisma.organization.findFirst({
+      where: {
+        adminEmail: email.toLowerCase(),
+      },
+    });
+
+    if (!organization) {
+      return res.status(404).json({
+        success: false,
+        error: 'Organization not found',
+      });
+    }
+
+    // Check if organization is approved
+    if (organization.kycStatus !== 'APPROVED') {
+      return res.status(403).json({
+        success: false,
+        error: 'Organization is not approved yet. Please wait for admin verification.',
+      });
+    }
+
+    // Verify wallet address is in admin wallets
+    const adminWallets = organization.adminWallets as any[];
+    const walletFound = adminWallets.some(
+      (wallet: any) => wallet.address && wallet.address.toLowerCase() === walletAddress.toLowerCase()
+    );
+
+    if (!walletFound) {
+      return res.status(403).json({
+        success: false,
+        error: 'Wallet address not authorized for this organization',
+      });
+    }
+
+    logger.info(`Organization ${organization.organizationId} authenticated via wallet ${walletAddress}`);
+
+    res.json({
+      success: true,
+      organizationId: organization.organizationId,
+      message: 'Authentication successful',
+    });
+  } catch (error: any) {
+    logger.error('Organization verification error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+});
+
 export default router;

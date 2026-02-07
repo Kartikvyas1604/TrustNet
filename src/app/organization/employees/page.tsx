@@ -47,11 +47,21 @@ export default function OrganizationEmployeesPage() {
       return
     }
     setOrganizationId(orgId)
-    loadEmployees(orgId)
+    checkStatusAndLoadEmployees(orgId)
   }, [router])
 
-  const loadEmployees = async (orgId: string) => {
+  const checkStatusAndLoadEmployees = async (orgId: string) => {
     try {
+      // Check organization status first
+      const statusResponse = await fetch(`/api/organization/status/${orgId}`)
+      const statusData = await statusResponse.json()
+
+      if (statusData.success && statusData.organization.kycStatus !== 'APPROVED') {
+        router.push('/organization/pending')
+        return
+      }
+
+      // If approved, load employees
       const response = await fetch(`/api/organization/${orgId}/employees`)
       const data = await response.json()
 

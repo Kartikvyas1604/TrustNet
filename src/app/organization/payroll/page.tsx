@@ -44,8 +44,23 @@ export default function OrganizationPayrollPage() {
       return
     }
     setOrganizationId(orgId)
+    checkOrganizationStatus(orgId)
     loadData(orgId)
   }, [router])
+
+  const checkOrganizationStatus = async (orgId: string) => {
+    try {
+      const response = await fetch(`/api/organization/status/${orgId}`)
+      const data = await response.json()
+
+      if (data.success && data.organization.kycStatus !== 'APPROVED') {
+        router.push('/organization/pending')
+        return
+      }
+    } catch (error) {
+      console.error('Failed to check organization status:', error)
+    }
+  }
 
   const loadData = async (orgId: string) => {
     try {
