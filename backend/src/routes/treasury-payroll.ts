@@ -60,31 +60,40 @@ router.post('/:organizationId/deposit', async (req: Request, res: Response) => {
     const { organizationId } = req.params;
     const { chain } = req.body;
 
+    logger.info(`Deposit address request for org: ${organizationId}, chain: ${chain}`);
+
     const organization = await prisma.organization.findUnique({
       where: { organizationId },
     });
 
     if (!organization) {
+      logger.error(`Organization not found: ${organizationId}`);
       return res.status(404).json({ success: false, error: 'Organization not found' });
     }
 
     const treasuryAddresses = organization.treasuryAddresses as any;
 
     if (!treasuryAddresses) {
+      logger.error(`Treasury addresses not configured for org: ${organizationId}`);
       return res.status(400).json({
         success: false,
         error: 'Treasury addresses not configured. Complete organization setup first.',
       });
     }
 
+    logger.info(`Treasury addresses:`, treasuryAddresses);
+
     const depositAddress = treasuryAddresses[chain];
 
     if (!depositAddress) {
+      logger.error(`Chain ${chain} not found in treasury addresses`);
       return res.status(400).json({
         success: false,
-        error: `Chain ${chain} not supported`,
+        error: `Chain '${chain}' not supported. Available chains: ${Object.keys(treasuryAddresses).join(', ')}`,
       });
     }
+
+    logger.info(`Returning deposit address for ${chain}: ${depositAddress}`);
 
     res.json({
       success: true,
@@ -175,6 +184,69 @@ router.post('/:organizationId/deposit-detected', async (req: Request, res: Respo
     });
   } catch (error: any) {
     logger.error('Deposit detection error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * GET /api/treasury/:organizationId/deposits
+ * Get deposit history for organization treasury
+ */
+router.get('/:organizationId/deposits', async (req: Request, res: Response) => {
+  try {
+    const { organizationId } = req.params;
+
+    logger.info(`Fetching deposits for organization: ${organizationId}`);
+
+    const organization = await prisma.organization.findUnique({
+      where: { organizationId },
+    });
+
+    if (!organization) {
+      logger.error(`Organization not found: ${organizationId}`);
+      return res.status(404).json({ success: false, error: 'Organization not found' });
+    }
+
+    try {
+      // Get audit logs for treasury deposits
+      const depositLogs = await prisma.auditLog.findMany({
+        where: {
+          organizationId,
+          eventType: 'treasury_deposit',
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+        take: 50, // Limit to last 50 deposits
+      });
+
+      logger.info(`Found ${depositLogs.length} deposit logs`);
+
+      // Transform audit logs into deposit records
+      const deposits = depositLogs.map(log => ({
+        id: log.logId,
+        chain: (log.metadata as any)?.chain || 'unknown',
+        token: 'USDC',
+        amount: parseFloat((log.metadata as any)?.amount || '0'),
+        txHash: (log.metadata as any)?.txHash || null,
+        timestamp: log.createdAt.toISOString(),
+        status: 'completed',
+      }));
+
+      res.json({
+        success: true,
+        deposits,
+      });
+    } catch (auditError: any) {
+      // If audit log query fails, return empty array (table might not exist yet)
+      logger.warn('Audit log query failed, returning empty deposits:', auditError.message);
+      res.json({
+        success: true,
+        deposits: [],
+      });
+    }
+  } catch (error: any) {
+    logger.error('Get deposits error:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });

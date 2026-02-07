@@ -78,26 +78,58 @@ export default function OrganizationTreasuryPage() {
     try {
       // Load balances
       const balanceResponse = await fetch(`/api/treasury/${orgId}`)
-      const balanceData = await balanceResponse.json()
-
-      if (balanceData.success && balanceData.balances) {
-        setBalances(balanceData.balances)
+      
+      if (!balanceResponse.ok) {
+        console.error('Failed to fetch balances:', balanceResponse.status, balanceResponse.statusText)
+        setBalances([])
       } else {
-        setBalances([]) // Set empty array if no balances
+        const contentType = balanceResponse.headers.get('content-type')
+        if (contentType && contentType.includes('application/json')) {
+          const balanceData = await balanceResponse.json()
+          if (balanceData.success && balanceData.data?.balances) {
+            // Transform balance object into array format
+            const balanceObj = balanceData.data.balances
+            const balanceArray: Balance[] = Object.keys(balanceObj)
+              .filter(key => key !== 'total')
+              .map(chain => ({
+                chain,
+                token: 'USDC',
+                amount: parseFloat(balanceObj[chain] || '0'),
+                usdValue: parseFloat(balanceObj[chain] || '0'),
+              }))
+            setBalances(balanceArray)
+          } else {
+            setBalances([])
+          }
+        } else {
+          console.error('Received non-JSON response for balances')
+          setBalances([])
+        }
       }
 
       // Load deposit history
       const depositResponse = await fetch(`/api/treasury/${orgId}/deposits`)
-      const depositData = await depositResponse.json()
-
-      if (depositData.success && depositData.deposits) {
-        setDeposits(depositData.deposits)
+      
+      if (!depositResponse.ok) {
+        console.error('Failed to fetch deposits:', depositResponse.status, depositResponse.statusText)
+        setDeposits([])
       } else {
-        setDeposits([]) // Set empty array if no deposits
+        const contentType = depositResponse.headers.get('content-type')
+        if (contentType && contentType.includes('application/json')) {
+          const depositData = await depositResponse.json()
+          if (depositData.success && depositData.deposits) {
+            setDeposits(depositData.deposits)
+          } else {
+            setDeposits([])
+          }
+        } else {
+          console.error('Received non-JSON response for deposits')
+          setDeposits([])
+        }
       }
     } catch (error) {
       console.error('Failed to load treasury data:', error)
-      setBalances([]) // Set empty array on error
+      setBalances([])
       setDeposits([])
     } finally {
       setLoading(false)
@@ -106,19 +138,35 @@ export default function OrganizationTreasuryPage() {
 
   const generateDepositAddress = async (chain: string, token: string) => {
     try {
+      // Convert chain name to lowercase to match backend format
+      const chainLowerCase = chain.toLowerCase()
+      
       const response = await fetch(`/api/treasury/${organizationId}/deposit`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ chain, token }),
+        body: JSON.stringify({ chain: chainLowerCase, token }),
       })
+
+      if (!response.ok) {
+        console.error('Failed to generate deposit address:', response.status)
+        return
+      }
+
+      const contentType = response.headers.get('content-type')
+      if (!contentType || !contentType.includes('application/json')) {
+        console.error('Received non-JSON response for deposit address')
+        return
+      }
 
       const data = await response.json()
 
-      if (data.success) {
+      if (data.success && data.address) {
         setDepositAddresses({
           ...depositAddresses,
           [`${chain}-${token}`]: data.address,
         })
+      } else {
+        console.error('Failed to generate deposit address:', data.error || 'Unknown error')
       }
     } catch (error) {
       console.error('Failed to generate deposit address:', error)

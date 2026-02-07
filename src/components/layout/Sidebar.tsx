@@ -34,6 +34,20 @@ export function Sidebar() {
 
       try {
         const response = await fetch(`/api/organization/${orgId}`)
+        
+        if (!response.ok) {
+          console.error('Failed to fetch organization:', response.status)
+          setLoading(false)
+          return
+        }
+        
+        const contentType = response.headers.get('content-type')
+        if (!contentType || !contentType.includes('application/json')) {
+          console.error('Received non-JSON response for organization')
+          setLoading(false)
+          return
+        }
+        
         const data = await response.json()
 
         if (data.success && data.organization) {

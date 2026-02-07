@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import { PrismaClient } from '@prisma/client';
 import TransactionService from '../services/TransactionService';
 import transactionOrchestrationService from '../services/TransactionOrchestrationService';
 import { sendSuccess, sendError, sendValidationError } from '../utils/response';
@@ -6,37 +7,80 @@ import { isValidAmount } from '../utils/validation';
 import { PrivacyLevel, TransactionType } from '../types';
 
 const router = Router();
+const prisma = new PrismaClient();
 
 /**
  * POST /api/transactions/send
- * Send transaction between employees
+ * Send transaction between employees or to external addresses
  */
 router.post('/send', async (req: Request, res: Response) => {
   try {
-    const { fromEmployeeId, toEmployeeId, amount, currency, chain, transactionType, privacyLevel, memo } = req.body;
+    const { fromEmployeeId, recipient, amount, currency, chain, privacyLevel, memo } = req.body;
 
-    if (!fromEmployeeId || !toEmployeeId || !amount || !chain) {
+    if (!fromEmployeeId || !recipient || !amount) {
       return res.status(400).json({
         success: false,
-        error: 'Missing required fields: fromEmployeeId, toEmployeeId, amount, chain',
+        error: 'Missing required fields: fromEmployeeId, recipient, amount',
       });
     }
 
+    // Default to Base Sepolia for all transactions
+    const txChain = chain || 'base';
+    const txCurrency = currency || 'USDC';
+
+    // Check if recipient is internal (ENS name or known wallet address)
+    let toEmployeeId = null;
+    let isInternal = false;
+
+    // Check if recipient is an ENS name
+    if (recipient.endsWith('.eth')) {
+      const employee = await prisma.employee.findFirst({
+        where: { ensName: recipient },
+      });
+      if (employee) {
+        toEmployeeId = employee.employeeId;
+        isInternal = true;
+      }
+    } else {
+      // Check if it's a known wallet address
+      const employee = await prisma.employee.findFirst({
+        where: {
+          OR: [
+            { walletAddresses: { path: ['ethereum'], equals: recipient } },
+            { walletAddresses: { path: ['base'], equals: recipient } },
+            { walletAddresses: { path: ['sui'], equals: recipient } },
+          ],
+        },
+      });
+      if (employee) {
+        toEmployeeId = employee.employeeId;
+        isInternal = true;
+      }
+    }
+
+    // For internal transactions, use enhanced privacy by default
+    const txPrivacyLevel = isInternal 
+      ? (privacyLevel || PrivacyLevel.ORGANIZATION_ONLY) 
+      : PrivacyLevel.PUBLIC;
+
     const transaction = await TransactionService.sendTransaction({
       fromEmployeeId,
-      toEmployeeId,
+      toEmployeeId: toEmployeeId || recipient,
       amount,
-      currency: currency || 'USDC',
-      chain,
-      transactionType,
-      privacyLevel,
+      currency: txCurrency,
+      chain: txChain,
+      transactionType: 'sui_direct',
+      privacyLevel: txPrivacyLevel,
       memo,
     });
 
     res.status(201).json({
       success: true,
       data: transaction,
-      message: 'Transaction initiated successfully',
+      isInternal,
+      message: isInternal 
+        ? 'Internal transaction initiated (hidden from public blockchain scanners)' 
+        : 'External transaction initiated',
     });
   } catch (error: any) {
     res.status(400).json({

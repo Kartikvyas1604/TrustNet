@@ -39,7 +39,7 @@ export default function OrganizationPendingPage() {
             setLoading(false)
             // Auto-redirect after 3 seconds
             setTimeout(() => {
-              router.push('/dashboard/overview')
+              router.push('/organization/dashboard')
             }, 3000)
           } else if (data.organization.approvalStatus === 'rejected') {
             setStatus('rejected')

@@ -45,6 +45,18 @@ export default function EmployeeSendPage() {
   const loadBalance = async (empId: string) => {
     try {
       const response = await fetch(`/api/employee/balance/${empId}`)
+      
+      if (!response.ok) {
+        console.error('Failed to fetch balance:', response.status)
+        return
+      }
+      
+      const contentType = response.headers.get('content-type')
+      if (!contentType || !contentType.includes('application/json')) {
+        console.error('Received non-JSON response for balance')
+        return
+      }
+      
       const data = await response.json()
       if (data.success) {
         setBalance(data.balance)
@@ -67,6 +79,19 @@ export default function EmployeeSendPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ recipient, employeeId }),
       })
+
+      if (!response.ok) {
+        console.error('Failed to check recipient:', response.status)
+        setChecking(false)
+        return
+      }
+      
+      const contentType = response.headers.get('content-type')
+      if (!contentType || !contentType.includes('application/json')) {
+        console.error('Received non-JSON response for recipient check')
+        setChecking(false)
+        return
+      }
 
       const data = await response.json()
 
