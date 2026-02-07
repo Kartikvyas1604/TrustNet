@@ -165,6 +165,10 @@ class ENSService {
       const registrarControllerAddress = process.env.ENS_REGISTRAR_CONTROLLER || 
         '0x253553366Da8546fc250F225fe3d25d0C782303b';
       
+      // Public Resolver address on mainnet
+      const publicResolverAddress = process.env.ENS_PUBLIC_RESOLVER ||
+        '0x231b0Ee14048e9dCcD1d247744d114a4EB5E8E63';
+      
       const registrarABI = [
         'function register(string name, address owner, uint256 duration, bytes32 secret, address resolver, bytes[] data, bool reverseRecord, uint16 ownerControlledFuses) payable',
         'function rentPrice(string name, uint256 duration) view returns (uint256)',
@@ -184,15 +188,23 @@ class ENSService {
       // Add 10% buffer for price fluctuations
       const value = price + (price / 10n);
 
-      // Register the name
+      // Encode address record data for the resolver
+      const resolverABI = [
+        'function setAddr(bytes32 node, address addr)'
+      ];
+      const resolverInterface = new ethers.Interface(resolverABI);
+      const node = ethers.namehash(`${label}.eth`);
+      const addrData = resolverInterface.encodeFunctionData('setAddr', [node, commitData.owner]);
+
+      // Register the name with resolver and set address record
       const tx = await registrar.register(
         label,
         commitData.owner,
         commitData.duration,
         commitData.secret,
-        ethers.ZeroAddress,
-        [],
-        false,
+        publicResolverAddress,
+        [addrData], // Set address record during registration
+        true, // Set reverse record
         0,
         { value }
       );
@@ -201,7 +213,9 @@ class ENSService {
 
       logger.info(`Registered ENS name: ${name}, tx: ${tx.hash}`);
       
-      // Clear commitment
+      // Clear cache and commitment
+      await redisService.cacheENSAddress(`${label}.eth`, commitData.owner);
+      await redisService.cacheENSName(commitData.owner, `${label}.eth`);
       this.commitments.delete(commitment);
       
       return tx.hash;
@@ -231,8 +245,13 @@ class ENSService {
       const ensRegistryAddress = process.env.ENS_REGISTRY || 
         '0x00000000000C2E074eC69A0dFb2997BA6C7d2e1e';
       
+      // Public Resolver address
+      const publicResolverAddress = process.env.ENS_PUBLIC_RESOLVER ||
+        '0x231b0Ee14048e9dCcD1d247744d114a4EB5E8E63';
+      
       const registryABI = [
         'function setSubnodeOwner(bytes32 node, bytes32 label, address owner) returns (bytes32)',
+        'function setResolver(bytes32 node, address resolver)',
       ];
       
       const registry = new ethers.Contract(
@@ -241,17 +260,41 @@ class ENSService {
         wallet
       );
 
-      // Calculate parent node
+      // Calculate parent node and subdomain node
       const parentNode = ethers.namehash(parentName);
       const labelHash = ethers.id(subdomain);
-
-      const tx = await registry.setSubnodeOwner(parentNode, labelHash, owner);
-      await tx.wait();
-
       const fullName = `${subdomain}.${parentName}`;
-      logger.info(`Set subdomain: ${fullName}, tx: ${tx.hash}`);
+      const fullNode = ethers.namehash(fullName);
+
+      // Step 1: Create subdomain and set owner
+      const tx1 = await registry.setSubnodeOwner(parentNode, labelHash, owner);
+      await tx1.wait();
+      logger.info(`Set subdomain owner: ${fullName}, tx: ${tx1.hash}`);
+
+      // Step 2: Set resolver for subdomain
+      const tx2 = await registry.setResolver(fullNode, publicResolverAddress);
+      await tx2.wait();
+      logger.info(`Set resolver for: ${fullName}, tx: ${tx2.hash}`);
+
+      // Step 3: Set address record in resolver
+      const resolverABI = [
+        'function setAddr(bytes32 node, address addr)',
+      ];
+      const resolver = new ethers.Contract(
+        publicResolverAddress,
+        resolverABI,
+        wallet
+      );
+
+      const tx3 = await resolver.setAddr(fullNode, owner);
+      await tx3.wait();
+      logger.info(`Set address record for: ${fullName} -> ${owner}, tx: ${tx3.hash}`);
+
+      // Cache the resolution
+      await redisService.cacheENSAddress(fullName, owner);
+      await redisService.cacheENSName(owner, fullName);
       
-      return tx.hash;
+      return tx3.hash;
     } catch (error) {
       logger.error('Failed to set subdomain:', error);
       throw error;
@@ -335,17 +378,22 @@ class ENSService {
 
       const wallet = new ethers.Wallet(signerPrivateKey, this.provider);
       
-      // Get the public resolver address
-      const resolverAddress = await this.provider.resolveName(name);
-      if (!resolverAddress) {
+      // Get the resolver for this name
+      const resolver = await this.provider.getResolver(name);
+      if (!resolver) {
         throw new Error('Resolver not found for name');
+      }
+
+      const resolverAddress = await resolver.getAddress();
+      if (!resolverAddress) {
+        throw new Error('Resolver address not found');
       }
 
       const resolverABI = [
         'function setText(bytes32 node, string key, string value)',
       ];
       
-      const resolver = new ethers.Contract(
+      const resolverContract = new ethers.Contract(
         resolverAddress,
         resolverABI,
         wallet
@@ -356,7 +404,7 @@ class ENSService {
       // Update each text record
       const txHashes: string[] = [];
       for (const record of records) {
-        const tx = await resolver.setText(node, record.key, record.value);
+        const tx = await resolverContract.setText(node, record.key, record.value);
         await tx.wait();
         txHashes.push(tx.hash);
         logger.info(`Updated text record ${record.key} for ${name}`);
