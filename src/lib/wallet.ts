@@ -11,6 +11,8 @@ interface EthereumProvider {
 declare global {
   interface Window {
     ethereum?: EthereumProvider
+    // MetaMask-specific provider
+    providers?: EthereumProvider[]
   }
 }
 
@@ -20,22 +22,46 @@ export interface WalletState {
   connected: boolean
 }
 
+// Helper function to get MetaMask provider specifically
+function getMetaMaskProvider(): EthereumProvider | null {
+  if (typeof window === 'undefined') return null
+
+  // If multiple wallets are installed, window.ethereum might be overridden
+  // Check window.providers array first (injected by MetaMask)
+  if (window.providers && Array.isArray(window.providers)) {
+    const metaMaskProvider = window.providers.find(
+      (provider) => provider.isMetaMask
+    )
+    if (metaMaskProvider) return metaMaskProvider
+  }
+
+  // Check if window.ethereum is MetaMask
+  if (window.ethereum?.isMetaMask) {
+    return window.ethereum
+  }
+
+  return null
+}
+
 export class WalletService {
   private provider: ethers.BrowserProvider | null = null
   private signer: ethers.JsonRpcSigner | null = null
 
   async connectWallet(): Promise<WalletState> {
-    if (typeof window === 'undefined' || !window.ethereum) {
-      throw new Error('MetaMask is not installed. Please install MetaMask to continue.')
+    // Get MetaMask provider specifically
+    const ethereum = getMetaMaskProvider()
+    
+    if (!ethereum) {
+      throw new Error('MetaMask is not installed. Please install MetaMask extension from metamask.io')
     }
 
     try {
-      // Request account access
-      const accounts = await window.ethereum.request({
+      // Request account access from MetaMask specifically
+      const accounts = await ethereum.request({
         method: 'eth_requestAccounts',
       })
 
-      this.provider = new ethers.BrowserProvider(window.ethereum)
+      this.provider = new ethers.BrowserProvider(ethereum as any)
       this.signer = await this.provider.getSigner()
       
       const address = accounts[0]
@@ -54,21 +80,23 @@ export class WalletService {
   }
 
   async switchToBaseSepolia(): Promise<void> {
-    if (!window.ethereum) {
+    const ethereum = getMetaMaskProvider()
+    
+    if (!ethereum) {
       throw new Error('MetaMask is not installed')
     }
 
     const BASE_SEPOLIA_CHAIN_ID = '0x14A34' // 84532 in hex
 
     try {
-      await window.ethereum.request({
+      await ethereum.request({
         method: 'wallet_switchEthereumChain',
         params: [{ chainId: BASE_SEPOLIA_CHAIN_ID }],
       })
     } catch (error: any) {
       // Chain doesn't exist, add it
       if (error.code === 4902) {
-        await window.ethereum.request({
+        await ethereum.request({
           method: 'wallet_addEthereumChain',
           params: [
             {
@@ -135,25 +163,26 @@ export class WalletService {
 
   // Listen for account changes
   onAccountsChanged(callback: (accounts: string[]) => void): void {
-    if (window.ethereum) {
-      window.ethereum.on('accountsChanged', callback)
+    const ethereum = getMetaMaskProvider()
+    if (ethereum) {
+      ethereum.on('accountsChanged', callback)
     }
   }
 
   // Listen for chain changes
   onChainChanged(callback: (chainId: string) => void): void {
-    if (window.ethereum) {
-      window.ethereum.on('chainChanged', callback)
+    const ethereum = getMetaMaskProvider()
+    if (ethereum) {
+      ethereum.on('chainChanged', callback)
     }
   }
 
   // Remove listeners
   removeListeners(): void {
-    if (window.ethereum) {
-      // Note: MetaMask doesn't expose removeAllListeners in types
-      // We'll just rely on the component cleanup
-    }
+    // Note: MetaMask doesn't expose removeAllListeners in types
+    // We'll just rely on the component cleanup
   }
 }
 
+// Export singleton instance
 export const walletService = new WalletService()

@@ -22,12 +22,20 @@ import { Badge } from '@/components/ui/badge'
 
 interface AuthKey {
   id: string
-  key: string
+  key?: string // Only available for newly generated keys
   keyHash: string
-  used: boolean
+  status?: string // Backend returns 'status' instead of 'used'
+  used?: boolean // For compatibility
   usedBy?: string
   usedAt?: string
-  createdAt: string
+  assignedEmployeeId?: string
+  generatedAt?: string
+  createdAt?: string
+}
+
+interface NewlyGeneratedKey {
+  key: string
+  keyHash: string
 }
 
 export default function OrganizationAuthKeysPage() {
@@ -36,6 +44,8 @@ export default function OrganizationAuthKeysPage() {
   const [loading, setLoading] = useState(true)
   const [generating, setGenerating] = useState(false)
   const [authKeys, setAuthKeys] = useState<AuthKey[]>([])
+  const [newlyGeneratedKeys, setNewlyGeneratedKeys] = useState<NewlyGeneratedKey[]>([])
+  const [showKeysModal, setShowKeysModal] = useState(false)
   const [visibleKeys, setVisibleKeys] = useState<Set<string>>(new Set())
   const [copiedKey, setCopiedKey] = useState('')
 
@@ -95,16 +105,24 @@ export default function OrganizationAuthKeysPage() {
         body: JSON.stringify({ count: parseInt(count) }),
       })
 
+      if (!response.ok) {
+        throw new Error(`Server error: ${response.status}`)
+      }
+
       const data = await response.json()
 
-      if (data.success) {
-        alert(`${data.generated} auth keys generated successfully!`)
-        loadAuthKeys(organizationId)
+      if (data.success && data.keys && data.keys.length > 0) {
+        // Store newly generated keys to show in modal
+        setNewlyGeneratedKeys(data.keys)
+        setShowKeysModal(true)
+        // Reload the list to show updated counts
+        await loadAuthKeys(organizationId)
       } else {
-        alert('Generation failed: ' + (data.error || 'Unknown error'))
+        alert('Generation failed: ' + (data.error || 'No keys returned'))
       }
     } catch (error: any) {
-      alert('Error: ' + error.message)
+      console.error('Key generation error:', error)
+      alert('Error generating keys: ' + error.message)
     } finally {
       setGenerating(false)
     }
@@ -147,8 +165,26 @@ export default function OrganizationAuthKeysPage() {
     setTimeout(() => setCopiedKey(''), 2000)
   }
 
-  const availableKeys = authKeys.filter((k) => !k.used).length
-  const usedKeys = authKeys.filter((k) => k.used).length
+  const downloadKeys = () => {
+    const keysText = newlyGeneratedKeys.map(k => k.key).join('\n')
+    const blob = new Blob([keysText], { type: 'text/plain' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `auth-keys-${Date.now()}.txt`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  const closeKeysModal = () => {
+    if (confirm('Have you saved these keys? They cannot be retrieved again!')) {
+      setShowKeysModal(false)
+      setNewlyGeneratedKeys([])
+    }
+  }
+
+  const availableKeys = authKeys.filter((k) => k.status === 'UNUSED' || (!k.status && !k.used)).length
+  const usedKeys = authKeys.filter((k) => k.status === 'ACTIVE' || k.used).length
 
   if (loading) {
     return (
@@ -169,6 +205,61 @@ export default function OrganizationAuthKeysPage() {
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back
         </Button>
+
+        {/* Modal for newly generated keys */}
+        {showKeysModal && (
+          <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+            <Card className="bg-vault-darker border-vault-green/50 max-w-2xl w-full max-h-[80vh] overflow-auto">
+              <CardHeader>
+                <CardTitle className="text-2xl text-white flex items-center gap-2">
+                  <Key className="w-6 h-6 text-vault-green" />
+                  Auth Keys Generated Successfully!
+                </CardTitle>
+                <CardDescription className="text-red-400 font-semibold">
+                  ⚠️ SAVE THESE KEYS NOW - They cannot be retrieved again!
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="bg-vault-dark/50 p-4 rounded-lg space-y-2">
+                  {newlyGeneratedKeys.map((keyObj, index) => (
+                    <div key={index} className="flex items-center gap-2 p-2 bg-vault-dark rounded">
+                      <code className="text-vault-green font-mono text-sm flex-1">
+                        {keyObj.key}
+                      </code>
+                      <Button
+                        size="icon"
+                        variant="outline"
+                        className="border-vault-slate/20"
+                        onClick={() => copyKey(keyObj.key)}
+                      >
+                        {copiedKey === keyObj.key ? (
+                          <Check className="w-4 h-4 text-vault-green" />
+                        ) : (
+                          <Copy className="w-4 h-4" />
+                        )}
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex gap-3">
+                  <Button
+                    onClick={downloadKeys}
+                    className="flex-1 bg-vault-green hover:bg-vault-green/90"
+                  >
+                    Download Keys
+                  </Button>
+                  <Button
+                    onClick={closeKeysModal}
+                    variant="outline"
+                    className="flex-1 border-vault-slate/20"
+                  >
+                    I've Saved These Keys
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
         <div className="flex items-center justify-between mb-8">
           <div>
@@ -304,61 +395,31 @@ export default function OrganizationAuthKeysPage() {
                       {/* Key Value */}
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
-                          {visibleKeys.has(authKey.id) ? (
-                            <code className="text-vault-green font-mono text-sm">
-                              {authKey.key}
-                            </code>
-                          ) : (
-                            <code className="text-vault-slate font-mono text-sm">
-                              {'•'.repeat(16)}
-                            </code>
-                          )}
+                          <code className="text-vault-slate font-mono text-xs">
+                            {authKey.keyHash}
+                          </code>
                           <Badge
                             className={
-                              authKey.used
-                                ? 'bg-yellow-500/20 text-yellow-500'
-                                : 'bg-vault-green/20 text-vault-green'
+                              authKey.status === 'UNUSED' || (!authKey.status && !authKey.used)
+                                ? 'bg-vault-green/20 text-vault-green'
+                                : 'bg-yellow-500/20 text-yellow-500'
                             }
                           >
-                            {authKey.used ? 'Used' : 'Available'}
+                            {authKey.status || (authKey.used ? 'ACTIVE' : 'UNUSED')}
                           </Badge>
                         </div>
                         <p className="text-xs text-vault-slate">
-                          Created {new Date(authKey.createdAt).toLocaleString()}
-                          {authKey.used && authKey.usedBy && (
-                            <> • Used by {authKey.usedBy}</>
+                          Created {new Date(authKey.generatedAt || authKey.createdAt || Date.now()).toLocaleString()}
+                          {(authKey.status === 'ACTIVE' || authKey.used) && authKey.assignedEmployeeId && (
+                            <> • Employee: {authKey.assignedEmployeeId}</>
                           )}
                         </p>
                       </div>
 
                       {/* Actions */}
                       <div className="flex gap-2">
-                        {!authKey.used && (
+                        {(authKey.status === 'UNUSED' || (!authKey.status && !authKey.used)) && (
                           <>
-                            <Button
-                              size="icon"
-                              variant="outline"
-                              className="border-vault-slate/20"
-                              onClick={() => toggleKeyVisibility(authKey.id)}
-                            >
-                              {visibleKeys.has(authKey.id) ? (
-                                <EyeOff className="w-4 h-4" />
-                              ) : (
-                                <Eye className="w-4 h-4" />
-                              )}
-                            </Button>
-                            <Button
-                              size="icon"
-                              variant="outline"
-                              className="border-vault-slate/20"
-                              onClick={() => copyKey(authKey.key)}
-                            >
-                              {copiedKey === authKey.key ? (
-                                <Check className="w-4 h-4 text-vault-green" />
-                              ) : (
-                                <Copy className="w-4 h-4" />
-                              )}
-                            </Button>
                             <Button
                               size="icon"
                               variant="outline"

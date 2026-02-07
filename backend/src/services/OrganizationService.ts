@@ -97,6 +97,32 @@ class OrganizationService {
   }
 
   /**
+   * Get all auth keys for an organization
+   */
+  async getAuthKeys(organizationId: string) {
+    const organization = await Organization.findOne({ organizationId });
+    if (!organization) {
+      throw new Error('Organization not found');
+    }
+
+    const authKeys = await prisma.authKey.findMany({
+      where: { organizationId },
+      orderBy: { generatedAt: 'desc' },
+    });
+
+    return authKeys.map(key => ({
+      id: key.id,
+      keyHash: key.keyHash.substring(0, 20) + '...', // Truncate hash for display
+      status: key.status,
+      assignedEmployeeId: key.assignedEmployeeId,
+      generatedAt: key.generatedAt,
+      usedAt: key.usedAt,
+      revokedAt: key.revokedAt,
+      expiresAt: key.expiresAt,
+    }));
+  }
+
+  /**
    * Generate auth keys for employees
    */
   async generateAuthKeys(

@@ -105,6 +105,26 @@ router.get('/status/:id', async (req: Request, res: Response) => {
 });
 
 /**
+ * GET /api/organizations/:id/auth-keys
+ * Get all auth keys for organization
+ */
+router.get('/:id/auth-keys', async (req: Request, res: Response) => {
+  try {
+    const authKeys = await OrganizationService.getAuthKeys(req.params.id);
+
+    res.json({
+      success: true,
+      authKeys,
+    });
+  } catch (error: any) {
+    res.status(400).json({
+      success: false,
+      error: error.message,
+    });
+  }
+});
+
+/**
  * POST /api/organizations/:id/generate-keys
  * Generate auth keys for organization
  */

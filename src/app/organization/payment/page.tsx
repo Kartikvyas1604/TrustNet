@@ -35,16 +35,16 @@ export default function PaymentPage() {
     fetchPaymentConfig()
     
     // Setup wallet listeners
-    walletService.onAccountsChanged((accounts) => {
+    walletService.onAccountsChanged((accounts: string[]) => {
       if (accounts.length === 0) {
         setWalletState({ address: null, chainId: null, connected: false })
       } else {
-        setWalletState(prev => ({ ...prev, address: accounts[0] }))
+        setWalletState((prev: WalletState) => ({ ...prev, address: accounts[0] }))
       }
     })
 
-    walletService.onChainChanged((chainId) => {
-      setWalletState(prev => ({ ...prev, chainId: parseInt(chainId, 16) }))
+    walletService.onChainChanged((chainId: string) => {
+      setWalletState((prev: WalletState) => ({ ...prev, chainId: parseInt(chainId, 16) }))
     })
 
     return () => {

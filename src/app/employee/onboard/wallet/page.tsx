@@ -7,12 +7,15 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Wallet, ArrowRight, Loader2 } from 'lucide-react'
+import { Wallet, ArrowRight, Loader2, AlertCircle } from 'lucide-react'
+import { walletService } from '@/lib/wallet'
+import { ethers } from 'ethers'
 
 export default function EmployeeOnboardWalletPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [step, setStep] = useState<'connect' | 'profile'>('connect')
+  const [error, setError] = useState('')
   const [walletAddress, setWalletAddress] = useState('')
   const [organizationName, setOrganizationName] = useState('Organization')
   const [profileData, setProfileData] = useState({
@@ -28,29 +31,17 @@ export default function EmployeeOnboardWalletPage() {
   }, [])
 
   const handleConnectWallet = async () => {
-    setLoading(true)
+    setError('')
 
     try {
-      // In a real implementation, use wagmi/ethers to connect wallet
-      // For now, we'll simulate wallet connection
+      // Use walletService to connect MetaMask (avoids extension conflicts)
+      const walletState = await walletService.connectWallet()
       
-      // Check if MetaMask is installed
-      if (typeof window.ethereum === 'undefined') {
-        alert('Please install MetaMask to continue')
-        setLoading(false)
-        return
+      if (!walletState.connected || !walletState.address) {
+        throw new Error('Failed to connect wallet')
       }
 
-      // Request account access
-      const accounts = await window.ethereum.request({ 
-        method: 'eth_requestAccounts' 
-      })
-      
-      if (!window.ethereum) {
-        throw new Error('MetaMask disconnected')
-      }
-      
-      const address = accounts[0]
+      const address = walletState.address
       setWalletAddress(address)
 
       // Generate signature challenge
@@ -67,15 +58,24 @@ export default function EmployeeOnboardWalletPage() {
       const data = await response.json()
 
       if (data.success) {
-        // Sign message
-        if (!window.ethereum) {
+        // Sign message using ethers provider
+        // We need to get the MetaMask provider specifically
+        const ethereum = (window as any).ethereum
+        if (!ethereum) {
           throw new Error('MetaMask not available')
         }
+        
+        // If multiple wallets, find MetaMask
+        let metaMaskProvider = ethereum
+        if ((window as any).providers && Array.isArray((window as any).providers)) {
+          const found = (window as any).providers.find((p: any) => p.isMetaMask)
+          if (found) metaMaskProvider = found
+        }
+        
+        const provider = new ethers.BrowserProvider(metaMaskProvider)
+        const signer = await provider.getSigner()
         const message = data.data.challenge.message
-        const signature = await window.ethereum.request({
-          method: 'personal_sign',
-          params: [message, address],
-        })
+        const signature = await signer.signMessage(message)
 
         // Verify signature
         const verifyResponse = await fetch('/api/employee/verify-signature', {
@@ -94,14 +94,14 @@ export default function EmployeeOnboardWalletPage() {
         if (verifyData.success) {
           setStep('profile')
         } else {
-          alert(verifyData.error || 'Signature verification failed')
+          setError(verifyData.error || 'Signature verification failed')
         }
       } else {
-        alert(data.error || 'Wallet connection failed')
+        setError(data.error || 'Wallet connection failed')
       }
     } catch (error: any) {
       console.error('Wallet connection error:', error)
-      alert(error.message || 'Failed to connect wallet')
+      setError(error.message || 'Failed to connect wallet')
     } finally {
       setLoading(false)
     }
@@ -257,6 +257,15 @@ export default function EmployeeOnboardWalletPage() {
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Connecting...
+          {error && (
+            <div className="mb-6 p-4 rounded-lg bg-red-500/10 border border-red-500/30">
+              <p className="text-red-400 text-sm flex items-center gap-2">
+                <AlertCircle size={16} />
+                {error}
+              </p>
+            </div>
+          )}
+
               </>
             ) : (
               <>

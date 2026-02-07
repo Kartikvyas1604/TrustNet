@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
+const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'
 
 export async function GET(
   request: NextRequest,
@@ -8,12 +8,22 @@ export async function GET(
 ) {
   try {
     const { id } = await params
-    const response = await fetch(`${BACKEND_URL}/api/organization/${id}/auth-keys`, {
+    
+    // Call backend with plural "organizations"
+    const response = await fetch(`${BACKEND_URL}/api/organizations/${id}/auth-keys`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
       },
     })
+
+    if (!response.ok) {
+      const text = await response.text()
+      return NextResponse.json(
+        { success: false, error: text || `Backend error ${response.status}` },
+        { status: response.status }
+      )
+    }
 
     const data = await response.json()
     return NextResponse.json(data)

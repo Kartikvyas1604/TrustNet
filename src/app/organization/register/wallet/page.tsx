@@ -6,6 +6,8 @@ import { motion } from 'framer-motion'
 import { Wallet, Shield, ArrowLeft, Loader2, Check, AlertCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { walletService } from '@/lib/wallet'
+import { ethers } from 'ethers'
 
 export default function OrganizationWalletPage() {
   const router = useRouter()
@@ -26,23 +28,16 @@ export default function OrganizationWalletPage() {
   }, [router])
 
   const connectWallet = async () => {
-    if (typeof window.ethereum === 'undefined') {
-      alert('Please install MetaMask to continue')
-      return
-    }
-
     setLoading(true)
     try {
-      // Request account access
-      if (!window.ethereum) {
-        throw new Error('MetaMask not available')
+      // Use walletService to connect MetaMask
+      const walletState = await walletService.connectWallet()
+      
+      if (!walletState.connected || !walletState.address) {
+        throw new Error('Failed to connect wallet')
       }
-      const accounts = await window.ethereum.request({
-        method: 'eth_requestAccounts',
-      })
 
-      const address = accounts[0]
-      setWalletAddress(address)
+      setWalletAddress(walletState.address)
       setConnected(true)
     } catch (error: any) {
       alert('Wallet connection failed: ' + error.message)
@@ -65,16 +60,22 @@ export default function OrganizationWalletPage() {
 
       const { challenge } = await challengeResponse.json()
 
-      // Check if ethereum is available
-      if (!window.ethereum) {
+      // Use ethers to sign message - get MetaMask specifically
+      const ethereum = (window as any).ethereum
+      if (!ethereum) {
         throw new Error('MetaMask is not installed')
       }
 
-      // Request signature from MetaMask
-      const sig = await window.ethereum.request({
-        method: 'personal_sign',
-        params: [challenge, walletAddress],
-      })
+      // If multiple wallets, find MetaMask
+      let metaMaskProvider = ethereum
+      if ((window as any).providers && Array.isArray((window as any).providers)) {
+        const found = (window as any).providers.find((p: any) => p.isMetaMask)
+        if (found) metaMaskProvider = found
+      }
+
+      const provider = new ethers.BrowserProvider(metaMaskProvider)
+      const signer = await provider.getSigner()
+      const sig = await signer.signMessage(challenge)
 
       setSignature(sig)
 

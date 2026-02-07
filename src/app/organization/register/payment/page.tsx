@@ -7,15 +7,10 @@ import { CreditCard, Wallet, Building2, FileText, ArrowLeft, Loader2, Check, Cop
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { walletService } from '@/lib/wallet'
+import { ethers } from 'ethers'
 
 type PaymentMethod = 'card' | 'crypto' | 'bank' | 'invoice'
-
-// Extend Window interface for MetaMask
-declare global {
-  interface Window {
-    ethereum?: any
-  }
-}
 
 export default function OrganizationPaymentPage() {
   const router = useRouter()
@@ -131,31 +126,15 @@ export default function OrganizationPaymentPage() {
   }
 
   const sendEthPayment = async () => {
-    if (!window.ethereum) {
-      alert('Please install MetaMask to pay with crypto')
-      return
-    }
-
     setLoading(true)
     try {
-      // Request account access
-      const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' })
-      const fromAddress = accounts[0]
+      // Use walletService for payment
+      const result = await walletService.sendPayment(
+        paymentAddress,
+        paymentAmount.toString()
+      )
 
-      // Convert amount to wei (assuming amount is in ETH)
-      const amountInWei = '0x' + Math.floor(paymentAmount * 1e18).toString(16)
-
-      // Send transaction
-      const transactionHash = await window.ethereum.request({
-        method: 'eth_sendTransaction',
-        params: [{
-          from: fromAddress,
-          to: paymentAddress,
-          value: amountInWei,
-        }],
-      })
-
-      setTxHash(transactionHash)
+      setTxHash(result.txHash)
       setPaymentSent(true)
 
       // Verify payment on backend
@@ -164,7 +143,7 @@ export default function OrganizationPaymentPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           organizationId,
-          txHash: transactionHash,
+          txHash: result.txHash,
         }),
       })
 
@@ -174,7 +153,7 @@ export default function OrganizationPaymentPage() {
         alert('Payment verified! Proceeding to verification step.')
         router.push('/organization/register/verification')
       } else {
-        alert('Payment sent but verification failed. Please contact support with TX: ' + transactionHash)
+        alert('Payment sent but verification failed. Please contact support with TX: ' + result.txHash)
       }
 
       setLoading(false)
