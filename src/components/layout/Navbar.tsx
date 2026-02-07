@@ -3,7 +3,6 @@
 import React from 'react'
 import Link from 'next/link'
 import { Shield } from 'lucide-react'
-import { WalletConnect } from '@/components/wallet/WalletConnect'
 import { Button } from '@/components/ui/button'
 
 export function Navbar() {

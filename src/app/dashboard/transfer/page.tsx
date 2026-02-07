@@ -6,7 +6,6 @@ import { ArrowRightLeft, ShieldCheck, Zap, Lock, Scan, CheckCircle2, AlertCircle
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { WalletConnect } from '@/components/wallet/WalletConnect'
 import { apiClient, type CreateTransactionRequest } from '@/lib/api-client'
 
 const containerVariants = {
@@ -261,9 +260,6 @@ export default function TransferPage() {
                         </div>
                     </CardContent>
                 </Card>
-
-                {/* Wallet Connection */}
-                <WalletConnect />
             </motion.div>
 
             {/* Right Column: Recent Transfers */}

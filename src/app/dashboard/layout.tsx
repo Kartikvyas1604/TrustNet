@@ -4,7 +4,6 @@ import React, { useEffect, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { Loader2 } from 'lucide-react'
 import { Sidebar } from '@/components/layout/Sidebar'
-import { WalletConnect } from '@/components/wallet/WalletConnect'
 import { Badge } from '@/components/ui/badge'
 import { Bell } from 'lucide-react'
 
@@ -80,8 +79,6 @@ export default function DashboardLayout({
                         <Bell size={18} />
                         <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse" />
                     </button>
-                    <div className="h-6 w-px bg-vault-slate/20" />
-                    <WalletConnect />
                 </div>
              </header>
 
