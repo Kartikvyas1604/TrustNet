@@ -80,19 +80,25 @@ export default function OrganizationTreasuryPage() {
       const balanceResponse = await fetch(`/api/treasury/${orgId}`)
       const balanceData = await balanceResponse.json()
 
-      if (balanceData.success) {
+      if (balanceData.success && balanceData.balances) {
         setBalances(balanceData.balances)
+      } else {
+        setBalances([]) // Set empty array if no balances
       }
 
       // Load deposit history
       const depositResponse = await fetch(`/api/treasury/${orgId}/deposits`)
       const depositData = await depositResponse.json()
 
-      if (depositData.success) {
+      if (depositData.success && depositData.deposits) {
         setDeposits(depositData.deposits)
+      } else {
+        setDeposits([]) // Set empty array if no deposits
       }
     } catch (error) {
       console.error('Failed to load treasury data:', error)
+      setBalances([]) // Set empty array on error
+      setDeposits([])
     } finally {
       setLoading(false)
     }
@@ -125,7 +131,7 @@ export default function OrganizationTreasuryPage() {
     setTimeout(() => setCopiedAddress(''), 2000)
   }
 
-  const totalUsdValue = balances.reduce((sum, b) => sum + b.usdValue, 0)
+  const totalUsdValue = balances?.reduce((sum, b) => sum + b.usdValue, 0) || 0
 
   if (loading) {
     return (

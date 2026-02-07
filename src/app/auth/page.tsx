@@ -84,10 +84,10 @@ export default function AuthPage() {
     try {
       setLoading(true)
       
-      // Verify auth key format (XXXX-XXXX)
-      const keyRegex = /^[A-Z0-9]{4}-[A-Z0-9]{4}$/
+      // Verify auth key format (XXXX-XXXX-XXXX-XXXX)
+      const keyRegex = /^[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/
       if (!keyRegex.test(authKey.toUpperCase())) {
-        setError('Invalid auth key format. Use XXXX-XXXX')
+        setError('Invalid auth key format. Use XXXX-XXXX-XXXX-XXXX')
         return
       }
 
@@ -293,19 +293,19 @@ export default function AuthPage() {
                     <form onSubmit={handleEmployeeLogin} className="space-y-4">
                       <div>
                         <label className="text-sm font-medium text-vault-slate mb-2 block">
-                          Auth Key (XXXX-XXXX)
+                          Auth Key (XXXX-XXXX-XXXX-XXXX)
                         </label>
                         <Input
                           type="text"
-                          placeholder="ABCD-1234"
+                          placeholder="ABCD-1234-EFGH-5678"
                           value={authKey}
                           onChange={(e) => setAuthKey(e.target.value.toUpperCase())}
-                          maxLength={9}
-                          className="bg-vault-dark border-vault-slate/20 text-white font-mono text-center text-lg"
+                          maxLength={19}
+                          className="bg-vault-dark border-vault-slate/20 text-white font-mono text-center text-base"
                           required
                         />
                         <p className="text-xs text-vault-slate/70 mt-2">
-                          Format: Four characters, dash, four characters
+                          Format: 16 characters separated by dashes (XXXX-XXXX-XXXX-XXXX)
                         </p>
                       </div>
 

@@ -140,9 +140,21 @@ class OrganizationService {
       throw new Error('Organization must complete KYC before generating auth keys');
     }
 
-    // Limit key generation
-    if (count > organization.employeeLimit) {
-      throw new Error(`Cannot generate more than ${organization.employeeLimit} keys`);
+    // Check total key limit (existing + new keys)
+    const existingKeysCount = await prisma.authKey.count({
+      where: { 
+        organizationId,
+        status: { in: ['UNUSED', 'ACTIVE'] } // Count unused and active keys
+      }
+    });
+
+    const totalAfterGeneration = existingKeysCount + count;
+
+    if (totalAfterGeneration > organization.employeeLimit) {
+      throw new Error(
+        `Cannot generate ${count} keys. You have ${existingKeysCount} keys and your limit is ${organization.employeeLimit}. ` +
+        `You can generate up to ${organization.employeeLimit - existingKeysCount} more keys.`
+      );
     }
 
     const keys: Array<{ key: string; keyHash: string }> = [];

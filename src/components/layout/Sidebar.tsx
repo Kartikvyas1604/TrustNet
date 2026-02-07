@@ -1,6 +1,6 @@
 'use client'
 
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { motion } from 'framer-motion'
@@ -20,6 +20,44 @@ const navItems = [
 
 export function Sidebar() {
   const pathname = usePathname()
+  const [orgName, setOrgName] = useState('Organization')
+  const [orgInitials, setOrgInitials] = useState('ORG')
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const loadOrganization = async () => {
+      const orgId = sessionStorage.getItem('organizationId')
+      if (!orgId) {
+        setLoading(false)
+        return
+      }
+
+      try {
+        const response = await fetch(`/api/organization/${orgId}`)
+        const data = await response.json()
+
+        if (data.success && data.organization) {
+          const name = data.organization.name
+          setOrgName(name)
+          
+          // Generate initials from organization name
+          const initials = name
+            .split(' ')
+            .map((word: string) => word[0])
+            .join('')
+            .toUpperCase()
+            .slice(0, 2)
+          setOrgInitials(initials)
+        }
+      } catch (error) {
+        console.error('Failed to load organization:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadOrganization()
+  }, [])
 
   return (
     <aside className="w-64 border-r border-vault-slate/20 bg-vault-bg flex flex-col h-screen fixed left-0 top-0">
@@ -34,9 +72,13 @@ export function Sidebar() {
         <div className="mb-6 px-2">
             <p className="text-[10px] text-vault-slate uppercase tracking-wider font-mono mb-2">Organization</p>
             <div className="flex items-center gap-2 p-2 rounded-md bg-vault-slate/5 border border-vault-slate/10">
-                <div className="w-8 h-8 rounded bg-vault-blue flex items-center justify-center text-xs font-bold">SV</div>
+                <div className="w-8 h-8 rounded bg-vault-blue flex items-center justify-center text-xs font-bold">
+                  {loading ? '...' : orgInitials}
+                </div>
                 <div className="overflow-hidden">
-                    <div className="text-sm font-bold truncate">SVIT Corp</div>
+                    <div className="text-sm font-bold truncate" title={orgName}>
+                      {loading ? 'Loading...' : orgName}
+                    </div>
                     <div className="text-[10px] text-vault-green flex items-center gap-1">
                         <span className="w-1.5 h-1.5 rounded-full bg-vault-green animate-pulse" /> Verified
                     </div>

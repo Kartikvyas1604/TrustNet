@@ -14,7 +14,8 @@ import {
   Plus,
   Trash2,
   RefreshCw,
-  AlertCircle
+  AlertCircle,
+  User
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -44,6 +45,7 @@ export default function OrganizationAuthKeysPage() {
   const [loading, setLoading] = useState(true)
   const [generating, setGenerating] = useState(false)
   const [authKeys, setAuthKeys] = useState<AuthKey[]>([])
+  const [employeeLimit, setEmployeeLimit] = useState<number>(10)
   const [newlyGeneratedKeys, setNewlyGeneratedKeys] = useState<NewlyGeneratedKey[]>([])
   const [showKeysModal, setShowKeysModal] = useState(false)
   const [visibleKeys, setVisibleKeys] = useState<Set<string>>(new Set())
@@ -70,6 +72,13 @@ export default function OrganizationAuthKeysPage() {
         return
       }
 
+      // Get organization details including employee limit
+      const orgResponse = await fetch(`/api/organization/${orgId}`)
+      const orgData = await orgResponse.json()
+      if (orgData.success && orgData.organization) {
+        setEmployeeLimit(orgData.organization.employeeLimit || 10)
+      }
+
       // Load auth keys
       await loadAuthKeys(orgId)
     } catch (error) {
@@ -94,8 +103,22 @@ export default function OrganizationAuthKeysPage() {
   }
 
   const generateKeys = async () => {
-    const count = prompt('How many auth keys to generate?', '10')
+    const remainingSlots = employeeLimit - authKeys.length
+    const defaultCount = Math.min(10, remainingSlots)
+    
+    const count = prompt(
+      `How many auth keys to generate?\n\nYour subscription allows ${employeeLimit} employees.\nYou have ${authKeys.length} keys (${remainingSlots} slots remaining).`,
+      defaultCount.toString()
+    )
+    
     if (!count || isNaN(parseInt(count))) return
+
+    const requestedCount = parseInt(count)
+    
+    if (requestedCount > remainingSlots) {
+      alert(`You can only generate ${remainingSlots} more keys. Upgrade your subscription for more employees.`)
+      return
+    }
 
     setGenerating(true)
     try {
@@ -160,20 +183,38 @@ export default function OrganizationAuthKeysPage() {
   }
 
   const copyKey = (key: string) => {
-    navigator.clipboard.writeText(key)
-    setCopiedKey(key)
-    setTimeout(() => setCopiedKey(''), 2000)
+    navigator.clipboard.writeText(key).then(() => {
+      setCopiedKey(key)
+      setTimeout(() => setCopiedKey(''), 2000)
+    }).catch(() => {
+      // Fallback for browsers that don't support clipboard API
+      alert('Failed to copy. Please select and copy manually.')
+    })
   }
 
   const downloadKeys = () => {
-    const keysText = newlyGeneratedKeys.map(k => k.key).join('\n')
+    const keysText = newlyGeneratedKeys.map((k, i) => `Key ${i + 1}: ${k.key}`).join('\n')
     const blob = new Blob([keysText], { type: 'text/plain' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `auth-keys-${Date.now()}.txt`
+    a.download = `trustnet-auth-keys-${Date.now()}.txt`
     a.click()
     URL.revokeObjectURL(url)
+  }
+
+  const copyAllKeys = async () => {
+    const keysText = newlyGeneratedKeys.map(k => k.key).join('\n')
+    try {
+      await navigator.clipboard.writeText(keysText)
+      // Show success feedback
+      const originalText = newlyGeneratedKeys.length > 0 ? newlyGeneratedKeys[0].key : ''
+      setCopiedKey('ALL_KEYS_COPIED')
+      setTimeout(() => setCopiedKey(''), 2000)
+      alert(`✅ Copied ${newlyGeneratedKeys.length} keys to clipboard!\\n\\nYou can now paste them into an email or document.`)
+    } catch (err) {
+      alert('❌ Failed to copy. Please use the download button instead or copy keys individually.')
+    }
   }
 
   const closeKeysModal = () => {
@@ -220,17 +261,43 @@ export default function OrganizationAuthKeysPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="bg-vault-dark/50 p-4 rounded-lg space-y-2">
+                <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3">
+                  <p className="text-sm text-blue-100 font-medium mb-1">
+                    📋 How to share these keys with employees:
+                  </p>
+                  <ol className="text-xs text-blue-200/80 list-decimal list-inside space-y-1">
+                    <li>Click the copy icon next to each key OR click "Copy All Keys"</li>
+                    <li>Send keys securely to employees via email or HR system</li>
+                    <li>Employees use these keys at <span className="font-mono text-blue-100">/auth</span> to login</li>
+                    <li>Each key can only be used once</li>
+                  </ol>
+                </div>
+                
+                <div className="bg-vault-dark/50 p-4 rounded-lg space-y-2 max-h-96 overflow-y-auto">
                   {newlyGeneratedKeys.map((keyObj, index) => (
-                    <div key={index} className="flex items-center gap-2 p-2 bg-vault-dark rounded">
-                      <code className="text-vault-green font-mono text-sm flex-1">
-                        {keyObj.key}
-                      </code>
+                    <div key={index} className="flex items-center gap-2 p-3 bg-vault-dark rounded hover:bg-vault-dark/80 transition-colors">
+                      <div className="flex-1 min-w-0">
+                        <code 
+                          className="text-vault-green font-mono text-base block break-all cursor-text"
+                          onClick={(e) => {
+                            // Select the text when clicked
+                            const range = document.createRange()
+                            range.selectNodeContents(e.currentTarget)
+                            const selection = window.getSelection()
+                            selection?.removeAllRanges()
+                            selection?.addRange(range)
+                          }}
+                        >
+                          {keyObj.key}
+                        </code>
+                        <p className="text-xs text-vault-slate/60 mt-1">Key #{index + 1} (click text to select)</p>
+                      </div>
                       <Button
                         size="icon"
                         variant="outline"
-                        className="border-vault-slate/20"
+                        className="border-vault-slate/20 hover:border-vault-green/50 flex-shrink-0"
                         onClick={() => copyKey(keyObj.key)}
+                        title="Copy this key"
                       >
                         {copiedKey === keyObj.key ? (
                           <Check className="w-4 h-4 text-vault-green" />
@@ -241,20 +308,42 @@ export default function OrganizationAuthKeysPage() {
                     </div>
                   ))}
                 </div>
-                <div className="flex gap-3">
-                  <Button
-                    onClick={downloadKeys}
-                    className="flex-1 bg-vault-green hover:bg-vault-green/90"
-                  >
-                    Download Keys
-                  </Button>
+                <div className="space-y-3">
+                  <div className="flex gap-3">
+                    <Button
+                      onClick={copyAllKeys}
+                      variant="outline"
+                      className="flex-1 border-vault-green/30 hover:bg-vault-green/10 hover:border-vault-green"
+                    >
+                      {copiedKey === 'ALL_KEYS_COPIED' ? (
+                        <>
+                          <Check className="w-4 h-4 mr-2 text-vault-green" />
+                          Copied!
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-4 h-4 mr-2" />
+                          Copy All {newlyGeneratedKeys.length} Keys
+                        </>
+                      )}
+                    </Button>
+                    <Button
+                      onClick={downloadKeys}
+                      className="flex-1 bg-vault-green text-vault-dark hover:bg-vault-green/90"
+                    >
+                      💾 Download as .txt
+                    </Button>
+                  </div>
                   <Button
                     onClick={closeKeysModal}
                     variant="outline"
-                    className="flex-1 border-vault-slate/20"
+                    className="w-full border-red-500/30 text-red-400 hover:bg-red-500/10"
                   >
                     I've Saved These Keys
                   </Button>
+                  <p className="text-xs text-center text-vault-slate/70">
+                    ⚠️ These keys will never be shown again after closing this window
+                  </p>
                 </div>
               </CardContent>
             </Card>
@@ -268,8 +357,9 @@ export default function OrganizationAuthKeysPage() {
           </div>
           <Button
             onClick={generateKeys}
-            disabled={generating}
-            className="bg-vault-green hover:bg-vault-green/90"
+            disabled={generating || authKeys.length >= employeeLimit}
+            className="bg-vault-green hover:bg-vault-green/90 disabled:opacity-50"
+            title={authKeys.length >= employeeLimit ? "Employee limit reached" : "Generate new keys (shown once in popup)"}
           >
             {generating ? (
               <>
@@ -279,14 +369,14 @@ export default function OrganizationAuthKeysPage() {
             ) : (
               <>
                 <Plus className="mr-2 h-4 w-4" />
-                Generate Keys
+                Generate New Keys\u2192 Popup
               </>
             )}
           </Button>
         </div>
 
         {/* Stats */}
-        <div className="grid md:grid-cols-3 gap-4 mb-8">
+        <div className="grid md:grid-cols-4 gap-4 mb-8">
           <Card className="bg-vault-darker border-vault-slate/20">
             <CardContent className="p-6">
               <div className="flex items-center gap-3">
@@ -328,21 +418,70 @@ export default function OrganizationAuthKeysPage() {
               </div>
             </CardContent>
           </Card>
+
+          <Card className="bg-vault-darker border-vault-slate/20">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-full bg-purple-500/20 flex items-center justify-center">
+                  <User className="w-6 h-6 text-purple-400" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-white">{employeeLimit}</p>
+                  <p className="text-sm text-vault-slate">Employee Limit</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
+        {/* Limit Progress Bar */}
+        <Card className="bg-vault-darker border-vault-slate/20 mb-8">
+          <CardContent className="p-6">
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="text-vault-slate">Subscription Usage</span>
+                <span className="text-white font-semibold">
+                  {authKeys.length} / {employeeLimit} employees
+                </span>
+              </div>
+              <div className="w-full bg-vault-dark rounded-full h-3 overflow-hidden">
+                <div
+                  className={`h-full transition-all duration-500 ${
+                    authKeys.length >= employeeLimit
+                      ? 'bg-red-500'
+                      : authKeys.length >= employeeLimit * 0.8
+                      ? 'bg-yellow-500'
+                      : 'bg-vault-green'
+                  }`}
+                  style={{ width: `${Math.min((authKeys.length / employeeLimit) * 100, 100)}%` }}
+                />
+              </div>
+              <p className="text-xs text-vault-slate/70">
+                {authKeys.length >= employeeLimit ? (
+                  <span className="text-red-400 font-semibold">
+                    Limit reached! Upgrade your subscription to add more employees.
+                  </span>
+                ) : (
+                  `You can generate ${employeeLimit - authKeys.length} more keys.`
+                )}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Info Alert */}
-        <Card className="bg-blue-500/10 border-blue-500/20 mb-8">
-          <CardContent className="p-4">
+        <Card className="bg-amber-500/10 border-amber-500/30 mb-8">
+          <CardContent className="p-5">
             <div className="flex gap-3">
-              <AlertCircle className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
-              <div className="text-sm text-blue-100">
-                <p className="font-semibold mb-1">About Auth Keys:</p>
-                <ul className="list-disc list-inside space-y-1 text-blue-200/80">
-                  <li>Each employee needs one unique auth key to onboard</li>
-                  <li><strong>Keys are shown only once</strong> - save them immediately after generation</li>
-                  <li>Keys are single-use and cannot be reused once claimed</li>
-                  <li>Share keys securely via email or other private channels</li>
-                  <li>The list below shows key hashes and status, not the actual keys</li>
+              <AlertCircle className="w-6 h-6 text-amber-400 flex-shrink-0 mt-0.5" />
+              <div className="text-sm text-amber-100">
+                <p className="font-bold text-amber-300 mb-2 text-base">⚠️ IMPORTANT: Keys can only be copied during generation!</p>
+                <ul className="list-disc list-inside space-y-1.5 text-amber-200/90">
+                  <li><strong>The list below shows encrypted key hashes</strong> - these CANNOT be used for login</li>
+                  <li><strong>Actual keys are shown only once</strong> in a popup immediately after clicking "Generate Keys"</li>
+                  <li>You MUST copy/download keys from that popup before closing it</li>
+                  <li>If you closed the popup without saving, you need to generate new keys</li>
+                  <li>Each key is single-use and works at <span className="font-mono bg-amber-500/20 px-1 rounded">/auth</span> page</li>
                 </ul>
               </div>
             </div>
@@ -354,9 +493,9 @@ export default function OrganizationAuthKeysPage() {
           <Card className="bg-vault-darker border-vault-slate/20">
             <CardContent className="p-12 text-center">
               <Key className="w-16 h-16 text-vault-slate mx-auto mb-4 opacity-50" />
-              <h3 className="text-xl font-semibold text-white mb-2">No Auth Keys Yet</h3>
-              <p className="text-vault-slate mb-4">
-                Generate auth keys to allow employees to onboard
+              <h3 className="text-xl font-semibold text-white mb-2">No Auth Keys Generated Yet</h3>
+              <p className="text-vault-slate mb-6 max-w-md mx-auto">
+                Generate auth keys to allow employees to onboard. <strong className="text-amber-400">Keys will be shown once in a popup</strong> - make sure to copy them!
               </p>
               <Button
                 onClick={generateKeys}
@@ -364,7 +503,7 @@ export default function OrganizationAuthKeysPage() {
                 className="bg-vault-green hover:bg-vault-green/90"
               >
                 <Plus className="mr-2 h-4 w-4" />
-                Generate Keys
+                Generate Your First Keys
               </Button>
             </CardContent>
           </Card>
@@ -393,21 +532,26 @@ export default function OrganizationAuthKeysPage() {
                         />
                       </div>
 
-                      {/* Key Value */}
+                      {/* Key Hash (NOT the actual usable key) */}
                       <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <code className="text-vault-slate font-mono text-xs">
+                        <div className="flex flex-col gap-1.5 mb-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-xs text-red-400 font-bold bg-red-500/10 px-2 py-0.5 rounded">
+                              \u26d4 Encrypted Hash (Not Usable)
+                            </span>
+                            <Badge
+                              className={
+                                authKey.status === 'UNUSED' || (!authKey.status && !authKey.used)
+                                  ? 'bg-vault-green/20 text-vault-green'
+                                  : 'bg-yellow-500/20 text-yellow-500'
+                              }
+                            >
+                              {authKey.status || (authKey.used ? 'ACTIVE' : 'UNUSED')}
+                            </Badge>
+                          </div>
+                          <code className="text-vault-slate/60 font-mono text-xs block truncate max-w-md" title={authKey.keyHash}>
                             {authKey.keyHash}
                           </code>
-                          <Badge
-                            className={
-                              authKey.status === 'UNUSED' || (!authKey.status && !authKey.used)
-                                ? 'bg-vault-green/20 text-vault-green'
-                                : 'bg-yellow-500/20 text-yellow-500'
-                            }
-                          >
-                            {authKey.status || (authKey.used ? 'ACTIVE' : 'UNUSED')}
-                          </Badge>
                         </div>
                         <p className="text-xs text-vault-slate">
                           Created {new Date(authKey.generatedAt || authKey.createdAt || Date.now()).toLocaleString()}
