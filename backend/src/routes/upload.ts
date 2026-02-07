@@ -148,4 +148,90 @@ router.get('/document/:filename', async (req: Request, res: Response) => {
   }
 });
 
+/**
+ * POST /api/upload/single-document
+ * Upload a single document for organization
+ */
+router.post('/single-document', async (req: Request, res: Response) => {
+  try {
+    const { organizationId } = req.body;
+
+    if (!organizationId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Organization ID is required',
+      });
+    }
+
+    // Find organization
+    const organization = await prisma.organization.findUnique({
+      where: { organizationId },
+    });
+
+    if (!organization) {
+      return res.status(404).json({
+        success: false,
+        error: 'Organization not found',
+      });
+    }
+
+    if (!req.files || Object.keys(req.files).length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'No files were uploaded',
+      });
+    }
+
+    const allowedTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
+    const maxSize = 10 * 1024 * 1024; // 10MB
+
+    // Get the first file (should be only one)
+    const fieldName = Object.keys(req.files)[0];
+    const file: any = req.files[fieldName];
+
+    // Validate file type
+    if (!allowedTypes.includes(file.mimetype)) {
+      return res.status(400).json({
+        success: false,
+        error: `Invalid file type. Only PDF, JPG, and PNG are allowed.`,
+      });
+    }
+
+    // Validate file size
+    if (file.size > maxSize) {
+      return res.status(400).json({
+        success: false,
+        error: `File is too large. Maximum size is 10MB.`,
+      });
+    }
+
+    // Generate unique filename
+    const fileExtension = path.extname(file.name);
+    const uniqueFilename = `${organizationId}-${fieldName}-${crypto.randomBytes(8).toString('hex')}${fileExtension}`;
+    const filePath = path.join(uploadsDir, uniqueFilename);
+
+    // Save file
+    await file.mv(filePath);
+
+    // Generate accessible URL
+    const baseUrl = process.env.BACKEND_URL || 'http://localhost:5001';
+    const fileUrl = `${baseUrl}/uploads/${uniqueFilename}`;
+
+    logger.info(`Document uploaded for organization ${organizationId}: ${fieldName}`);
+
+    res.json({
+      success: true,
+      url: fileUrl,
+      documentType: fieldName,
+      message: 'Document uploaded successfully',
+    });
+  } catch (error: any) {
+    logger.error('Single file upload error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+});
+
 export default router;

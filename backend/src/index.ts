@@ -78,10 +78,13 @@ app.use(express.urlencoded({ extended: true }));
 
 // File upload middleware
 app.use(fileUpload({
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB max file size
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB max file size
   abortOnLimit: true,
   createParentPath: true,
 }));
+
+// Serve uploaded files
+app.use('/uploads', express.static('uploads'));
 
 // Stripe webhook endpoint (must be before body parser)
 app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), async (req, res) => {

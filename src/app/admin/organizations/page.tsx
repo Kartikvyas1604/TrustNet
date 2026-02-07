@@ -469,28 +469,34 @@ export default function AdminOrganizationApprovalPage() {
                     </div>
 
                     {/* KYC Documents */}
-                    {selectedOrg.kycDocuments && (
-                      <div>
-                        <h3 className="text-white font-semibold mb-4 flex items-center gap-2">
-                          <FileText className="w-4 h-4 text-vault-green" />
-                          KYC Documents
-                        </h3>
+                    <div>
+                      <h3 className="text-white font-semibold mb-4 flex items-center gap-2">
+                        <FileText className="w-4 h-4 text-vault-green" />
+                        KYC Documents
+                      </h3>
+                      {selectedOrg.kycDocuments && (typeof selectedOrg.kycDocuments === 'object') && Object.keys(selectedOrg.kycDocuments).length > 0 ? (
                         <div className="grid md:grid-cols-2 gap-3">
                           {Array.isArray(selectedOrg.kycDocuments) ? (
-                            selectedOrg.kycDocuments.map((doc: any, index: number) => (
-                              doc && doc.url && (
-                                <Button
-                                  key={index}
-                                  variant="outline"
-                                  className="border-vault-slate/20 hover:border-vault-green justify-start"
-                                  onClick={() => window.open(doc.url, '_blank')}
-                                >
-                                  <Download className="w-4 h-4 mr-2" />
-                                  {doc.name || doc.type?.replace(/([A-Z_])/g, ' $1').trim() || `Document ${index + 1}`}
-                                  <ExternalLink className="w-3 h-3 ml-auto" />
-                                </Button>
-                              )
-                            ))
+                            selectedOrg.kycDocuments.length > 0 ? (
+                              selectedOrg.kycDocuments.map((doc: any, index: number) => (
+                                doc && doc.url && (
+                                  <Button
+                                    key={index}
+                                    variant="outline"
+                                    className="border-vault-slate/20 hover:border-vault-green justify-start"
+                                    onClick={() => window.open(doc.url, '_blank')}
+                                  >
+                                    <Download className="w-4 h-4 mr-2" />
+                                    {doc.name || doc.type?.replace(/([A-Z_])/g, ' $1').trim() || `Document ${index + 1}`}
+                                    <ExternalLink className="w-3 h-3 ml-auto" />
+                                  </Button>
+                                )
+                              ))
+                            ) : (
+                              <div className="col-span-2 text-center py-8 text-vault-slate">
+                                No documents uploaded yet
+                              </div>
+                            )
                           ) : (
                             Object.entries(selectedOrg.kycDocuments as Record<string, any>).map(([key, value]) => {
                               const url = typeof value === 'string' ? value : value?.url;
@@ -510,8 +516,13 @@ export default function AdminOrganizationApprovalPage() {
                             })
                           )}
                         </div>
-                      </div>
-                    )}
+                      ) : (
+                        <div className="text-center py-8 px-4 border border-vault-slate/20 rounded-lg bg-vault-slate/5">
+                          <FileText className="w-8 h-8 text-vault-slate mx-auto mb-2" />
+                          <p className="text-vault-slate text-sm">No documents uploaded yet</p>
+                        </div>
+                      )}
+                    </div>
 
                     {/* Approval Actions */}
                     {selectedOrg.kycStatus === 'PENDING' && (

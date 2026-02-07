@@ -425,6 +425,8 @@ router.post(
 
       const { organizationId, documents } = req.body;
 
+      logger.info(`Verification submission for ${organizationId}:`, JSON.stringify(documents));
+
       // documents should contain: { businessCert, proofOfAddress, adminId, taxDoc }
       const organization = await prisma.organization.update({
         where: { organizationId },
@@ -433,6 +435,8 @@ router.post(
           kycStatus: 'PENDING', // Will be changed to APPROVED by admin
         },
       });
+
+      logger.info(`Organization ${organizationId} documents updated. KYC status: PENDING`);
 
       // TODO: Upload files to IPFS or S3
       // TODO: Send notification to admin panel
