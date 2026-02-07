@@ -35,7 +35,7 @@ export default function EmployeeSendPage() {
   useEffect(() => {
     const empId = sessionStorage.getItem('employeeId')
     if (!empId) {
-      router.push('/employee/login')
+      // Layout will handle redirect
       return
     }
     setEmployeeId(empId)

@@ -1,6 +1,8 @@
 'use client'
 
-import React from 'react'
+import React, { useEffect, useState } from 'react'
+import { useRouter, usePathname } from 'next/navigation'
+import { Loader2 } from 'lucide-react'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { WalletConnect } from '@/components/wallet/WalletConnect'
 import { Badge } from '@/components/ui/badge'
@@ -11,6 +13,57 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode
 }) {
+  const router = useRouter()
+  const pathname = usePathname()
+  const [isChecking, setIsChecking] = useState(true)
+  const [isAuthorized, setIsAuthorized] = useState(false)
+
+  useEffect(() => {
+    // Check if user is authenticated (either organization or employee)
+    const organizationId = sessionStorage.getItem('organizationId')
+    const employeeId = sessionStorage.getItem('employeeId')
+
+    console.log('Dashboard auth check:', { pathname, organizationId, employeeId })
+
+    // If neither organization nor employee is logged in, redirect to home
+    if (!organizationId && !employeeId) {
+      console.log('Not authenticated, redirecting to home')
+      setIsAuthorized(false)
+      setIsChecking(false)
+      router.replace('/')
+      return
+    }
+
+    // Authenticated
+    console.log('Authenticated, allowing access')
+    setIsAuthorized(true)
+    setIsChecking(false)
+  }, [pathname, router])
+
+  // Show loading while checking
+  if (isChecking) {
+    return (
+      <div className="min-h-screen bg-vault-bg text-vault-text flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 animate-spin text-vault-green mb-4 mx-auto" />
+          <p className="text-vault-slate">Checking authentication...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // If not authorized, don't render children (redirect is happening)
+  if (!isAuthorized) {
+    return (
+      <div className="min-h-screen bg-vault-bg text-vault-text flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 animate-spin text-vault-green mb-4 mx-auto" />
+          <p className="text-vault-slate">Redirecting to login...</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-vault-bg text-vault-text">
         <Sidebar />

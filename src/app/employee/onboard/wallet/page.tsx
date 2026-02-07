@@ -154,9 +154,17 @@ export default function EmployeeOnboardWalletPage() {
       if (data.success) {
         sessionStorage.setItem('employeeId', data.data.employeeId)
         sessionStorage.setItem('ensName', data.data.ensName)
+        sessionStorage.setItem('organizationName', data.data.organizationName)
         
-        // Show processing screen
-        router.push('/employee/onboard/processing')
+        // Check if this is an existing employee logging back in
+        if (data.data.isExisting) {
+          // Skip processing screen, go directly to dashboard
+          alert(data.data.message || 'Welcome back!')
+          router.push('/employee/dashboard')
+        } else {
+          // New employee, show processing screen
+          router.push('/employee/onboard/processing')
+        }
       } else {
         alert(data.error || 'Onboarding failed')
       }

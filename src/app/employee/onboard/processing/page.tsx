@@ -45,7 +45,7 @@ export default function EmployeeProcessingPage() {
 
     // Wait a moment then redirect
     await new Promise(resolve => setTimeout(resolve, 1000))
-    router.push('/dashboard/overview')
+    router.push('/employee/dashboard')
   }
 
   return (

@@ -162,14 +162,20 @@ class OrganizationService {
     // Generate keys
     for (let i = 0; i < count; i++) {
       // Generate random 16-character key (XXXX-XXXX-XXXX-XXXX format)
-      const randomBytes = crypto.randomBytes(12);
-      const key = randomBytes
-        .toString('base64')
-        .replace(/[^A-Za-z0-9]/g, '')
-        .substring(0, 16)
-        .toUpperCase()
-        .match(/.{1,4}/g)!
-        .join('-');
+      // Use a more reliable method to ensure exactly 16 alphanumeric characters
+      let key = '';
+      while (key.length < 16) {
+        const randomBytes = crypto.randomBytes(16);
+        const chars = randomBytes
+          .toString('base64')
+          .replace(/[^A-Za-z0-9]/g, '')
+          .toUpperCase();
+        key += chars;
+      }
+      key = key.substring(0, 16);
+      
+      // Format as XXXX-XXXX-XXXX-XXXX
+      key = key.match(/.{1,4}/g)!.join('-');
 
       // Hash the key for storage
       const keyHash = await bcrypt.hash(key, 10);

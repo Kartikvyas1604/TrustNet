@@ -533,7 +533,20 @@ router.post('/admin/organizations/:id/approve', async (req: Request, res: Respon
     const authKeyRecords = [];
 
     for (let i = 0; i < organization.employeeLimit; i++) {
-      const key = `${crypto.randomBytes(4).toString('hex').toUpperCase()}-${crypto.randomBytes(4).toString('hex').toUpperCase()}-${crypto.randomBytes(4).toString('hex').toUpperCase()}-${crypto.randomBytes(4).toString('hex').toUpperCase()}`;
+      // Generate exactly 16 alphanumeric characters
+      let keyChars = '';
+      while (keyChars.length < 16) {
+        const randomBytes = crypto.randomBytes(16);
+        const chars = randomBytes
+          .toString('base64')
+          .replace(/[^A-Za-z0-9]/g, '')
+          .toUpperCase();
+        keyChars += chars;
+      }
+      keyChars = keyChars.substring(0, 16);
+      
+      // Format as XXXX-XXXX-XXXX-XXXX
+      const key = keyChars.match(/.{1,4}/g)!.join('-');
       const keyHash = await bcrypt.hash(key, 10);
 
       authKeys.push(key);

@@ -18,7 +18,11 @@ const prisma = new PrismaClient();
 router.post(
   '/verify-code',
   [
-    body('authCode').notEmpty().withMessage('Auth code is required').matches(/^[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/).withMessage('Invalid auth code format'),
+    body('authCode')
+      .notEmpty()
+      .withMessage('Auth code is required')
+      .matches(/^[A-Z0-9]{3,4}-[A-Z0-9]{3,4}-[A-Z0-9]{3,4}-[A-Z0-9]{3,4}$/)
+      .withMessage('Invalid auth code format'),
   ],
   async (req: Request, res: Response) => {
     try {
@@ -29,9 +33,13 @@ router.post(
 
       const { authCode } = req.body;
 
-      // Find matching auth key
+      // Find matching auth key (allow both UNUSED and ACTIVE status for reusable codes)
       const authKeys = await prisma.authKey.findMany({
-        where: { status: 'UNUSED' },
+        where: { 
+          status: { 
+            in: ['UNUSED', 'ACTIVE'] // Allow reusable auth codes
+          } 
+        },
         include: { organization: true },
       });
 
@@ -47,7 +55,7 @@ router.post(
       if (!matchedKey) {
         return res.status(400).json({
           success: false,
-          error: 'Invalid auth code or code already used',
+          error: 'Invalid auth code. Please check the code and try again.',
         });
       }
 
@@ -65,6 +73,35 @@ router.post(
           success: false,
           error: 'Your organization subscription has expired. Please contact your administrator.',
         });
+      }
+
+      // If auth key is already assigned to an employee, check if they're logging back in
+      if (matchedKey.status === 'ACTIVE' && matchedKey.assignedEmployeeId) {
+        const existingEmployee = await prisma.employee.findUnique({
+          where: { employeeId: matchedKey.assignedEmployeeId },
+          include: { organization: true },
+        });
+
+        if (existingEmployee) {
+          // Employee exists, allow re-login with same code
+          res.json({
+            success: true,
+            data: {
+              valid: true,
+              organizationId: matchedKey.organizationId,
+              organizationName: matchedKey.organization.name,
+              organizationLogo: null,
+              tempToken: Buffer.from(JSON.stringify({ 
+                authKeyId: matchedKey.id, 
+                authCode,
+                existingEmployeeId: existingEmployee.employeeId 
+              })).toString('base64'),
+              isReturningEmployee: true,
+              existingEmployeeId: existingEmployee.employeeId,
+            },
+          });
+          return;
+        }
       }
 
       res.json({
@@ -219,11 +256,68 @@ router.post(
         include: { organization: true },
       });
 
-      if (!authKey || authKey.status !== 'UNUSED') {
+      if (!authKey) {
         return res.status(400).json({
           success: false,
-          error: 'Invalid or expired auth code',
+          error: 'Invalid auth code',
         });
+      }
+
+      // Check if auth key is revoked or expired
+      if (authKey.status === 'REVOKED' || authKey.status === 'EXPIRED') {
+        return res.status(400).json({
+          success: false,
+          error: 'This auth code has been revoked or expired',
+        });
+      }
+
+      // Check if employee already exists with this wallet
+      const existingEmployee = await prisma.employee.findFirst({
+        where: {
+          walletAddresses: {
+            path: ['ethereum'],
+            equals: walletAddress.toLowerCase(),
+          },
+        },
+      });
+
+      if (existingEmployee) {
+        // Employee already exists, just log them in
+        return res.status(200).json({
+          success: true,
+          data: {
+            employeeId: existingEmployee.employeeId,
+            ensName: existingEmployee.ensName,
+            walletAddress: walletAddress,
+            organizationName: authKey.organization.name,
+            status: 'active',
+            message: 'Welcome back! Logging you in.',
+            isExisting: true,
+          },
+        });
+      }
+
+      // Check if employee already exists with this auth key
+      if (authKey.assignedEmployeeId) {
+        const assignedEmployee = await prisma.employee.findUnique({
+          where: { employeeId: authKey.assignedEmployeeId },
+        });
+
+        if (assignedEmployee) {
+          // Employee exists, log them in
+          return res.status(200).json({
+            success: true,
+            data: {
+              employeeId: assignedEmployee.employeeId,
+              ensName: assignedEmployee.ensName,
+              walletAddress: walletAddress,
+              organizationName: authKey.organization.name,
+              status: 'active',
+              message: 'Welcome back! Logging you in.',
+              isExisting: true,
+            },
+          });
+        }
       }
 
       // Generate employee ID

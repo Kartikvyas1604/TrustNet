@@ -36,7 +36,9 @@ export default function EmployeeLoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    if (authCode.length < 19) {
+    // Allow keys between 14-19 characters (handles XXXX-XXXX-XXXX-XXX to XXXX-XXXX-XXXX-XXXX)
+    const cleanedCode = authCode.replace(/-/g, '')
+    if (cleanedCode.length < 12 || cleanedCode.length > 16) {
       setError('Please enter a complete auth code')
       return
     }
@@ -59,8 +61,15 @@ export default function EmployeeLoginPage() {
         sessionStorage.setItem('organizationName', data.data.organizationName)
         sessionStorage.setItem('organizationId', data.data.organizationId)
         
-        // Redirect to wallet connection
-        router.push('/employee/onboard/wallet')
+        // Check if this is a returning employee
+        if (data.data.isReturningEmployee && data.data.existingEmployeeId) {
+          // Returning employee - log them in directly
+          sessionStorage.setItem('employeeId', data.data.existingEmployeeId)
+          router.push('/employee/dashboard')
+        } else {
+          // New employee - redirect to wallet connection
+          router.push('/employee/onboard/wallet')
+        }
       } else {
         setError(data.error || 'Invalid auth code')
       }
@@ -119,7 +128,7 @@ export default function EmployeeLoginPage() {
             <Button
               type="submit"
               variant="cyber"
-              disabled={loading || authCode.length < 19}
+              disabled={loading || authCode.replace(/-/g, '').length < 12}
               className="w-full"
             >
               {loading ? (
