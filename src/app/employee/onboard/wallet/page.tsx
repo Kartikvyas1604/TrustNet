@@ -32,8 +32,17 @@ export default function EmployeeOnboardWalletPage() {
 
   const handleConnectWallet = async () => {
     setError('')
+    setLoading(true)
 
     try {
+      // Check if tempToken exists
+      const tempToken = sessionStorage.getItem('tempToken')
+      if (!tempToken) {
+        setError('Session expired. Please log in again.')
+        setTimeout(() => router.push('/employee/login'), 2000)
+        return
+      }
+
       // Use walletService to connect MetaMask (avoids extension conflicts)
       const walletState = await walletService.connectWallet()
       
@@ -45,7 +54,7 @@ export default function EmployeeOnboardWalletPage() {
       setWalletAddress(address)
 
       // Generate signature challenge
-      const tempToken = sessionStorage.getItem('tempToken')
+      console.log('Sending wallet connection request:', { tempToken: tempToken ? 'present' : 'missing', walletAddress: address })
       const response = await fetch('/api/employee/connect-wallet', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -56,6 +65,15 @@ export default function EmployeeOnboardWalletPage() {
       })
 
       const data = await response.json()
+
+      if (!response.ok) {
+        // Handle validation errors from backend
+        if (data.errors && Array.isArray(data.errors)) {
+          const errorMsg = data.errors.map((e: any) => e.msg).join(', ')
+          throw new Error(errorMsg)
+        }
+        throw new Error(data.error || 'Wallet connection failed')
+      }
 
       if (data.success) {
         // Sign message using ethers provider

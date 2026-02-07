@@ -273,11 +273,33 @@ router.post('/organization/verify', async (req: Request, res: Response) => {
 
     // Verify wallet address is in admin wallets
     const adminWallets = organization.adminWallets as any[];
+    
+    // Debug logging
+    logger.info('Organization auth attempt:', {
+      organizationId: organization.organizationId,
+      email: email.toLowerCase(),
+      providedWallet: walletAddress.toLowerCase(),
+      adminWallets: adminWallets,
+      adminWalletsCount: Array.isArray(adminWallets) ? adminWallets.length : 0,
+    });
+    
+    // Check if adminWallets is empty or not properly initialized
+    if (!Array.isArray(adminWallets) || adminWallets.length === 0) {
+      return res.status(403).json({
+        success: false,
+        error: 'No admin wallet configured for this organization. Please complete the registration process.',
+      });
+    }
+    
     const walletFound = adminWallets.some(
       (wallet: any) => wallet.address && wallet.address.toLowerCase() === walletAddress.toLowerCase()
     );
 
     if (!walletFound) {
+      logger.warn('Wallet not found in admin wallets:', {
+        providedWallet: walletAddress.toLowerCase(),
+        registeredWallets: adminWallets.map((w: any) => w.address?.toLowerCase()),
+      });
       return res.status(403).json({
         success: false,
         error: 'Wallet address not authorized for this organization',
