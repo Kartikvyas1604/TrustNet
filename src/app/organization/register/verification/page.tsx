@@ -145,7 +145,7 @@ export default function OrganizationVerificationPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           organizationId,
-          kycDocuments,
+          documents: kycDocuments,
         }),
       })
 
@@ -153,7 +153,7 @@ export default function OrganizationVerificationPage() {
 
       if (data.success) {
         sessionStorage.setItem('verificationSubmitted', 'true')
-        router.push('/organization/register/wallet')
+        router.push('/organization/register/pending')
       } else {
         alert('Verification submission failed: ' + (data.error || 'Unknown error'))
       }

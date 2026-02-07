@@ -23,7 +23,6 @@ export default function OrganizationLayout({
       '/organization/register/payment',
       '/organization/register/pending',
       '/organization/register/verification',
-      '/organization/register/wallet',
       '/organization/pending',
       '/organization/complete'
     ]
@@ -63,7 +62,6 @@ export default function OrganizationLayout({
     '/organization/register/payment',
     '/organization/register/pending',
     '/organization/register/verification',
-    '/organization/register/wallet',
     '/organization/pending',
     '/organization/complete'
   ]

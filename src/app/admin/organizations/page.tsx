@@ -476,20 +476,39 @@ export default function AdminOrganizationApprovalPage() {
                           KYC Documents
                         </h3>
                         <div className="grid md:grid-cols-2 gap-3">
-                          {Object.entries(selectedOrg.kycDocuments as Record<string, string>).map(([key, url]) => (
-                            url && (
-                              <Button
-                                key={key}
-                                variant="outline"
-                                className="border-vault-slate/20 hover:border-vault-green justify-start"
-                                onClick={() => window.open(url as string, '_blank')}
-                              >
-                                <Download className="w-4 h-4 mr-2" />
-                                {key.replace(/([A-Z])/g, ' $1').trim()}
-                                <ExternalLink className="w-3 h-3 ml-auto" />
-                              </Button>
-                            )
-                          ))}
+                          {Array.isArray(selectedOrg.kycDocuments) ? (
+                            selectedOrg.kycDocuments.map((doc: any, index: number) => (
+                              doc && doc.url && (
+                                <Button
+                                  key={index}
+                                  variant="outline"
+                                  className="border-vault-slate/20 hover:border-vault-green justify-start"
+                                  onClick={() => window.open(doc.url, '_blank')}
+                                >
+                                  <Download className="w-4 h-4 mr-2" />
+                                  {doc.name || doc.type?.replace(/([A-Z_])/g, ' $1').trim() || `Document ${index + 1}`}
+                                  <ExternalLink className="w-3 h-3 ml-auto" />
+                                </Button>
+                              )
+                            ))
+                          ) : (
+                            Object.entries(selectedOrg.kycDocuments as Record<string, any>).map(([key, value]) => {
+                              const url = typeof value === 'string' ? value : value?.url;
+                              const name = typeof value === 'object' ? value?.name : key;
+                              return url && (
+                                <Button
+                                  key={key}
+                                  variant="outline"
+                                  className="border-vault-slate/20 hover:border-vault-green justify-start"
+                                  onClick={() => window.open(url, '_blank')}
+                                >
+                                  <Download className="w-4 h-4 mr-2" />
+                                  {name?.replace(/([A-Z_])/g, ' $1').trim() || key.replace(/([A-Z_])/g, ' $1').trim()}
+                                  <ExternalLink className="w-3 h-3 ml-auto" />
+                                </Button>
+                              );
+                            })
+                          )}
                         </div>
                       </div>
                     )}

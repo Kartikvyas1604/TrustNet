@@ -8,8 +8,6 @@ import { Shield, ArrowRight, Key, Wallet, Building2, User, Loader2, AlertCircle 
 import { Button } from '@/components/ui/button'
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { walletService } from '@/lib/wallet'
-
 export default function AuthPage() {
   const router = useRouter()
   const [step, setStep] = useState<'role' | 'org-login' | 'employee-key'>('role')
@@ -18,7 +16,7 @@ export default function AuthPage() {
   
   // Organization login
   const [orgEmail, setOrgEmail] = useState('')
-  const [connecting, setConnecting] = useState(false)
+  const [orgId, setOrgId] = useState('')
   
   // Employee login
   const [authKey, setAuthKey] = useState('')
@@ -27,29 +25,21 @@ export default function AuthPage() {
     e.preventDefault()
     setError('')
     
-    if (!orgEmail) {
-      setError('Please enter your organization email')
+    if (!orgEmail || !orgId) {
+      setError('Please enter both email and organization ID')
       return
     }
 
     try {
-      setConnecting(true)
+      setLoading(true)
       
-      // Connect wallet for verification
-      const walletState = await walletService.connectWallet()
-      
-      if (!walletState.connected) {
-        setError('Failed to connect wallet')
-        return
-      }
-
-      // Verify organization exists and wallet is authorized
-      const response = await fetch('http://localhost:5001/api/auth/organization/verify', {
+      // Login with email and org ID
+      const response = await fetch('/api/auth/organization/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email: orgEmail,
-          walletAddress: walletState.address,
+          organizationId: orgId,
         }),
       })
 
@@ -59,16 +49,18 @@ export default function AuthPage() {
         // Store organization ID in session
         sessionStorage.setItem('organizationId', data.organizationId)
         sessionStorage.setItem('userType', 'organization')
+        sessionStorage.setItem('authenticated', 'true')
+        sessionStorage.setItem('authType', 'organization')
         
         // Redirect to organization dashboard
         router.push('/organization/dashboard')
       } else {
-        setError(data.error || 'Organization not found or wallet not authorized')
+        setError(data.error || 'Organization not found or invalid credentials')
       }
     } catch (err: any) {
       setError(err.message || 'Failed to authenticate')
     } finally {
-      setConnecting(false)
+      setLoading(false)
     }
   }
 
@@ -213,14 +205,14 @@ export default function AuthPage() {
                       Organization Login
                     </CardTitle>
                     <CardDescription>
-                      Connect your wallet to access your organization
+                      Enter your organization credentials
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
                     <form onSubmit={handleOrgLogin} className="space-y-4">
                       <div>
                         <label className="text-sm font-medium text-vault-slate mb-2 block">
-                          Organization Email
+                          Admin Email
                         </label>
                         <Input
                           type="email"
@@ -228,6 +220,20 @@ export default function AuthPage() {
                           value={orgEmail}
                           onChange={(e) => setOrgEmail(e.target.value)}
                           className="bg-vault-dark border-vault-slate/20 text-white"
+                          required
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-sm font-medium text-vault-slate mb-2 block">
+                          Organization ID
+                        </label>
+                        <Input
+                          type="text"
+                          placeholder="org_xxxxx"
+                          value={orgId}
+                          onChange={(e) => setOrgId(e.target.value)}
+                          className="bg-vault-dark border-vault-slate/20 text-white font-mono"
                           required
                         />
                       </div>
@@ -250,19 +256,16 @@ export default function AuthPage() {
                         </Button>
                         <Button
                           type="submit"
-                          disabled={connecting}
+                          disabled={loading}
                           className="flex-1 bg-vault-green text-vault-dark hover:bg-vault-green/90"
                         >
-                          {connecting ? (
+                          {loading ? (
                             <>
                               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                              Connecting...
+                              Logging in...
                             </>
                           ) : (
-                            <>
-                              <Wallet className="w-4 h-4 mr-2" />
-                              Connect Wallet
-                            </>
+                            'Login'
                           )}
                         </Button>
                       </div>

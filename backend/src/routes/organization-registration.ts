@@ -409,7 +409,12 @@ router.post(
   '/register/verification',
   [
     body('organizationId').notEmpty().withMessage('Organization ID is required'),
-    body('documents').isObject().withMessage('Documents object is required'),
+    body('documents').custom((value) => {
+      if (!value || (typeof value !== 'object')) {
+        throw new Error('Documents must be an object or array');
+      }
+      return true;
+    }),
   ],
   async (req: Request, res: Response) => {
     try {
