@@ -17,7 +17,7 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { QuickActions } from '@/components/dashboard/QuickActions'
+import { QuickActions } from '@/components/features/dashboard/QuickActions'
 
 export default function OrganizationDashboardPage() {
   const router = useRouter()

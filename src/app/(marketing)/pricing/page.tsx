@@ -2,7 +2,7 @@
 
 import React from 'react'
 import Link from 'next/link'
-import { Navbar } from '@/components/layout/Navbar'
+import { Navbar } from '@/components/shared/layout/Navbar'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardHeader, CardContent } from '@/components/ui/card'

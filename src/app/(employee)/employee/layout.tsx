@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { Loader2 } from 'lucide-react'
-import { EmployeeSidebar } from '@/components/layout/EmployeeSidebar'
+import { EmployeeSidebar } from '@/components/shared/layout/EmployeeSidebar'
 
 export default function EmployeeLayout({
   children,

@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { Loader2 } from 'lucide-react'
-import { Sidebar } from '@/components/layout/Sidebar'
+import { Sidebar } from '@/components/shared/layout/Sidebar'
 import { Badge } from '@/components/ui/badge'
 import { Bell } from 'lucide-react'
 

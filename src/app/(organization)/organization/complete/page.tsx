@@ -1,12 +1,12 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { CheckCircle, Loader2, ArrowRight } from 'lucide-react'
 
-export default function OrganizationCompletePage() {
+function OrganizationCompleteContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const organizationId = searchParams.get('orgId')
@@ -172,5 +172,17 @@ export default function OrganizationCompletePage() {
         </div>
       </Card>
     </div>
+  )
+}
+
+export default function OrganizationCompletePage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-100 flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+      </div>
+    }>
+      <OrganizationCompleteContent />
+    </Suspense>
   )
 }

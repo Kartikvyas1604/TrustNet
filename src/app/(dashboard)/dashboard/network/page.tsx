@@ -4,7 +4,7 @@ import React from 'react'
 import { motion } from 'framer-motion'
 import { Globe, Server, Activity, Radio } from 'lucide-react'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
-import { NetworkTopology } from '@/components/dashboard/NetworkTopology'
+import { NetworkTopology } from '@/components/features/dashboard/NetworkTopology'
 
 const containerVariants = {
   hidden: { opacity: 0 },

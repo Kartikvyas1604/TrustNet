@@ -6,9 +6,9 @@ import { Activity, Users, FileKey, Lock } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { NetworkTopology } from '@/components/dashboard/NetworkTopology'
-import { StatsDisplay } from '@/components/dashboard/StatsDisplay'
-import { AuthKeyInput } from '@/components/dashboard/AuthKeyInput'
+import { NetworkTopology } from '@/components/features/dashboard/NetworkTopology'
+import { StatsDisplay } from '@/components/features/dashboard/StatsDisplay'
+import { AuthKeyInput } from '@/components/features/dashboard/AuthKeyInput'
 
 const containerVariants = {
   hidden: { opacity: 0 },
