@@ -29,6 +29,18 @@ export default function EmployeeReceivePage() {
   const loadEmployeeData = async (empId: string) => {
     try {
       const response = await fetch(`/api/employee/profile/${empId}`)
+      
+      if (!response.ok) {
+        console.error('Failed to fetch profile:', response.status)
+        return
+      }
+      
+      const contentType = response.headers.get('content-type')
+      if (!contentType || !contentType.includes('application/json')) {
+        console.error('Received non-JSON response for profile')
+        return
+      }
+      
       const data = await response.json()
       if (data.success) {
         setEmployeeData(data.employee)

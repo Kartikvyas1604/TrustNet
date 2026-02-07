@@ -94,7 +94,13 @@ export default function OrganizationWalletPage() {
       const data = await verifyResponse.json()
 
       if (data.success) {
+        // Set up authentication session
         sessionStorage.setItem('walletConnected', 'true')
+        sessionStorage.setItem('authenticated', 'true')
+        sessionStorage.setItem('authType', 'organization')
+        sessionStorage.setItem('walletAddress', walletAddress)
+        // organizationId is already set
+        
         // Wait a moment before redirect
         setTimeout(() => {
           router.push('/organization/register/pending')

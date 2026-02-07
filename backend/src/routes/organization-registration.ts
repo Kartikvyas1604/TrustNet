@@ -563,9 +563,36 @@ router.post('/admin/organizations/:id/approve', async (req: Request, res: Respon
       data: authKeyRecords,
     });
 
+    // Create treasury wallet addresses for supported chains
+    const adminWallets = organization.adminWallets as any;
+    const primaryWallet = Array.isArray(adminWallets) && adminWallets.length > 0 
+      ? adminWallets[0].address 
+      : null;
+
+    // For now, use the admin's primary wallet as treasury address for all chains
+    // In production, you should generate separate addresses for each chain
+    const treasuryAddresses = {
+      ethereum: primaryWallet || `0x${crypto.randomBytes(20).toString('hex')}`,
+      sui: primaryWallet || `0x${crypto.randomBytes(20).toString('hex')}`,
+      base: primaryWallet || `0x${crypto.randomBytes(20).toString('hex')}`,
+      polygon: primaryWallet || `0x${crypto.randomBytes(20).toString('hex')}`,
+      arbitrum: primaryWallet || `0x${crypto.randomBytes(20).toString('hex')}`,
+      arc: primaryWallet || `0x${crypto.randomBytes(20).toString('hex')}`,
+    };
+
+    // Initialize treasury balances
+    const treasuryBalance = {
+      ethereum: '0',
+      sui: '0',
+      base: '0',
+      polygon: '0',
+      arbitrum: '0',
+      arc: '0',
+      total: '0',
+    };
+
     // TODO: Deploy contracts on blockchain
     // TODO: Register ENS domain
-    // TODO: Create treasury wallets
 
     const updatedOrg = await prisma.organization.update({
       where: { organizationId: id },
@@ -574,6 +601,8 @@ router.post('/admin/organizations/:id/approve', async (req: Request, res: Respon
         verifiedAt: new Date(),
         verificationNotes: notes,
         ensName,
+        treasuryAddresses,
+        treasuryBalance,
       },
     });
 

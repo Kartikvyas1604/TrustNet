@@ -36,6 +36,20 @@ export default function EmployeeDashboardPage() {
   const loadDashboardData = async (empId: string) => {
     try {
       const response = await fetch(`/api/employee/profile/${empId}`)
+      
+      if (!response.ok) {
+        console.error('Failed to fetch employee profile:', response.status)
+        setLoading(false)
+        return
+      }
+      
+      const contentType = response.headers.get('content-type')
+      if (!contentType || !contentType.includes('application/json')) {
+        console.error('Received non-JSON response for employee profile')
+        setLoading(false)
+        return
+      }
+      
       const data = await response.json()
 
       if (data.success) {

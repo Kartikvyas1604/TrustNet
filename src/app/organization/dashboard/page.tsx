@@ -10,7 +10,9 @@ import {
   TrendingUp, 
   AlertCircle,
   Loader2,
-  ArrowRight
+  ArrowRight,
+  LogOut,
+  RefreshCw
 } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -22,20 +24,39 @@ export default function OrganizationDashboardPage() {
   const [loading, setLoading] = useState(true)
   const [orgData, setOrgData] = useState<any>(null)
   const [organizationId, setOrganizationId] = useState<string>('')
+  const [walletAddress, setWalletAddress] = useState<string>('')
 
   useEffect(() => {
+    // Check authentication
+    const authenticated = sessionStorage.getItem('authenticated')
+    const authType = sessionStorage.getItem('authType')
     const orgId = sessionStorage.getItem('organizationId')
-    if (!orgId) {
+    const wallet = sessionStorage.getItem('walletAddress')
+    
+    // Redirect to login if not authenticated
+    if (!authenticated || authType !== 'organization' || !orgId || !wallet) {
       router.push('/organization/login')
       return
     }
+    
     setOrganizationId(orgId)
+    setWalletAddress(wallet)
     loadDashboardData(orgId)
   }, [router])
 
   const loadDashboardData = async (orgId: string) => {
     try {
       const response = await fetch(`/api/organization/status/${orgId}`)
+      
+      if (!response.ok) {
+        const contentType = response.headers.get('content-type')
+        if (contentType && contentType.includes('application/json')) {
+          const errorData = await response.json()
+          throw new Error(errorData.error || 'Failed to load dashboard data')
+        }
+        throw new Error('Failed to load dashboard data')
+      }
+
       const data = await response.json()
 
       if (data.success) {
@@ -54,6 +75,21 @@ export default function OrganizationDashboardPage() {
     }
   }
 
+  const handleLogout = () => {
+    // Clear session
+    sessionStorage.clear()
+    // Redirect to login
+    router.push('/organization/login')
+  }
+
+  const handleSwitchOrganization = () => {
+    // Clear current org but keep wallet
+    sessionStorage.removeItem('organizationId')
+    sessionStorage.removeItem('authenticated')
+    // Redirect to login to select different org
+    router.push('/organization/login')
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-vault-dark via-vault-dark/95 to-vault-dark/90 flex items-center justify-center">
@@ -66,17 +102,42 @@ export default function OrganizationDashboardPage() {
     <div className="min-h-screen bg-gradient-to-br from-vault-dark via-vault-dark/95 to-vault-dark/90 py-12">
       <div className="container max-w-7xl mx-auto px-4 space-y-8">
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex-1">
             <h1 className="text-4xl font-bold text-white flex items-center gap-3">
               <Building2 className="w-10 h-10 text-vault-green" />
               {orgData?.name || 'Organization Dashboard'}
             </h1>
             <p className="text-vault-slate mt-2">Manage your organization and employees</p>
+            {walletAddress && (
+              <p className="text-xs text-vault-slate/60 mt-1 font-mono">
+                {walletAddress.slice(0, 6)}...{walletAddress.slice(-4)}
+              </p>
+            )}
           </div>
-          <Badge className="bg-vault-green/20 text-vault-green">
-            {orgData?.status || 'Active'}
-          </Badge>
+          <div className="flex items-center gap-3">
+            <Badge className="bg-vault-green/20 text-vault-green">
+              {orgData?.status || 'Active'}
+            </Badge>
+            <Button
+              onClick={handleSwitchOrganization}
+              variant="outline"
+              size="sm"
+              className="border-vault-slate/20 text-vault-slate hover:text-white hover:border-vault-slate/40"
+            >
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Switch Org
+            </Button>
+            <Button
+              onClick={handleLogout}
+              variant="outline"
+              size="sm"
+              className="border-red-500/20 text-red-400 hover:text-red-300 hover:border-red-500/40"
+            >
+              <LogOut className="w-4 h-4 mr-2" />
+              Logout
+            </Button>
+          </div>
         </div>
 
         {/* Stats Overview */}

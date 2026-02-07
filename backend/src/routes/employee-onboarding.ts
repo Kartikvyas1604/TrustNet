@@ -491,25 +491,136 @@ router.get('/profile/:id', async (req: Request, res: Response) => {
 
     res.json({
       success: true,
-      data: {
-        employee: {
-          id: employee.employeeId,
-          nickname: (employee.profileData as any)?.nickname,
-          email: (employee.profileData as any)?.email,
-          avatar: (employee.profileData as any)?.avatar,
-          jobTitle: (employee.profileData as any)?.jobTitle,
-          ensName: employee.ensName,
-          walletAddresses: employee.walletAddresses,
-          status: employee.status,
-          onboardingDate: employee.onboardingDate,
-          organization: employee.organization,
-        },
-        balances,
+      employee: {
+        employeeId: employee.employeeId,
+        nickname: (employee.profileData as any)?.nickname || 'Employee',
+        email: (employee.profileData as any)?.email || '',
+        avatar: (employee.profileData as any)?.avatar,
+        jobTitle: (employee.profileData as any)?.jobTitle || 'Team Member',
+        ensName: employee.ensName,
+        ensSubdomain: employee.ensName, // For compatibility
+        walletAddresses: employee.walletAddresses,
+        primaryWallet: (employee.walletAddresses as any)?.ethereum || (employee.walletAddresses as any)?.base,
+        status: employee.status,
+        onboardingDate: employee.onboardingDate,
+        organizationId: employee.organization.organizationId,
+        organizationName: employee.organization.name,
+        // Balance information
+        onChainBalance: 0,
+        offChainBalance: 0,
+        totalBalance: 0,
+        // Transaction statistics
+        totalSent: 0,
+        sentCount: 0,
+        totalReceived: 0,
+        receivedCount: 0,
         transactionCount,
       },
     });
   } catch (error: any) {
     logger.error('Get employee profile error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * GET /api/employee/balance/:id
+ * Get employee balance
+ */
+router.get('/balance/:id', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const employee = await prisma.employee.findUnique({
+      where: { employeeId: id },
+    });
+
+    if (!employee) {
+      return res.status(404).json({ success: false, error: 'Employee not found' });
+    }
+
+    // TODO: Get actual balance from blockchain
+    // For now, return mock data
+    res.json({
+      success: true,
+      balance: {
+        onChain: '1000.00',
+        offChain: '500.00',
+        total: '1500.00',
+        currency: 'USDC',
+      },
+    });
+  } catch (error: any) {
+    logger.error('Get employee balance error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * POST /api/employee/check-recipient
+ * Check if recipient address is internal or external
+ */
+router.post('/check-recipient', async (req: Request, res: Response) => {
+  try {
+    const { recipient, employeeId } = req.body;
+
+    if (!recipient) {
+      return res.status(400).json({ success: false, error: 'Recipient address required' });
+    }
+
+    // Check if recipient is an ENS name (ends with .eth)
+    if (recipient.endsWith('.eth')) {
+      // Check if it's an internal ENS
+      const employee = await prisma.employee.findFirst({
+        where: {
+          ensName: recipient,
+        },
+      });
+
+      if (employee) {
+        return res.json({
+          success: true,
+          isInternal: true,
+          recipientType: 'ens',
+          recipientInfo: {
+            ensName: employee.ensName,
+            nickname: (employee.profileData as any)?.nickname,
+          },
+        });
+      }
+    }
+
+    // Check if it's a wallet address
+    const employee = await prisma.employee.findFirst({
+      where: {
+        OR: [
+          { walletAddresses: { path: ['ethereum'], equals: recipient } },
+          { walletAddresses: { path: ['base'], equals: recipient } },
+          { walletAddresses: { path: ['sui'], equals: recipient } },
+        ],
+      },
+    });
+
+    if (employee) {
+      return res.json({
+        success: true,
+        isInternal: true,
+        recipientType: 'wallet',
+        recipientInfo: {
+          ensName: employee.ensName,
+          nickname: (employee.profileData as any)?.nickname,
+        },
+      });
+    }
+
+    // External address
+    res.json({
+      success: true,
+      isInternal: false,
+      recipientType: 'external',
+    });
+  } catch (error: any) {
+    logger.error('Check recipient error:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });

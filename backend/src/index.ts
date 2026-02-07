@@ -30,6 +30,7 @@ import transactionRoutes from './routes/transactions';
 import ensRoutes from './routes/ens';
 import authRoutes from './routes/auth';
 import adminRoutes from './routes/admin';
+import walletAuthRoutes from './routes/wallet-auth';
 
 // Import new workflow routes
 import organizationRegistrationRoutes from './routes/organization-registration';
@@ -108,6 +109,7 @@ app.get('/health', (req: Request, res: Response) => {
 
 // API Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/auth', walletAuthRoutes); // Wallet-based authentication
 app.use('/api/ens', ensRoutes);
 app.use('/api/organizations', organizationRoutes);
 app.use('/api/employees', employeeRoutes);
