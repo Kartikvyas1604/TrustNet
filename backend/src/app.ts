@@ -83,18 +83,12 @@ export function createApp(): Express {
   // ======================
   // API ROUTES
   // ======================
+  // Mount v1 routes at /api/v1
   app.use('/api/v1', apiV1Routes);
   
-  // Redirect old API routes to v1
-  app.use('/api', (req: Request, res: Response, next: NextFunction) => {
-    if (req.path.startsWith('/v1')) {
-      return next();
-    }
-    // Redirect to v1 if not already versioned
-    logger.info(`Redirecting legacy route ${req.path} to /api/v1${req.path}`);
-    req.url = `/v1${req.url}`;
-    next();
-  }, apiV1Routes);
+  // Handle legacy routes at /api/* (without /v1)
+  // Mount the same routes at /api for backward compatibility
+  app.use('/api', apiV1Routes);
 
   // ======================
   // ERROR HANDLERS
