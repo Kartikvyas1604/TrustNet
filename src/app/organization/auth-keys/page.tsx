@@ -339,9 +339,10 @@ export default function OrganizationAuthKeysPage() {
                 <p className="font-semibold mb-1">About Auth Keys:</p>
                 <ul className="list-disc list-inside space-y-1 text-blue-200/80">
                   <li>Each employee needs one unique auth key to onboard</li>
+                  <li><strong>Keys are shown only once</strong> - save them immediately after generation</li>
                   <li>Keys are single-use and cannot be reused once claimed</li>
                   <li>Share keys securely via email or other private channels</li>
-                  <li>Generate new keys anytime as your team grows</li>
+                  <li>The list below shows key hashes and status, not the actual keys</li>
                 </ul>
               </div>
             </div>
