@@ -6,6 +6,7 @@ import { motion } from 'framer-motion'
 import { Navbar } from '@/components/layout/Navbar'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Card } from '@/components/ui/card'
 import { Shield, Lock, Globe, Server, CheckCircle2, ArrowRight } from 'lucide-react'
 
 export default function LandingPage() {
